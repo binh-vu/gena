@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "todolist"
+version = "1.0.0"
+description = ""
+authors = ["Binh Vu <binh@toan2.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+flask-peewee-restful = "^1.0.0"
+loguru = "^0.5.3"
+tornado = "^6.1"
+orjson = "^3.6.4"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

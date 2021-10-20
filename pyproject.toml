@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "flask_peewee_restful"
+version = "1.0.1"
+description = "Generate Flask Restful API from Peewee Models"
+authors = ["Binh Vu <binh@toan2.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+peewee = "^3.14.4"
+Flask = "^2.0.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
