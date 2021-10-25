@@ -1,1 +1,1 @@
-export { CenterNavBar } from "./Navbar";
+export * from "./Navbar";

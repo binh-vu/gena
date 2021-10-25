@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "flask_peewee_restful"
-version = "1.0.1"
+name = "flask-peewee-restful"
+version = "1.0.2"
 description = "Generate Flask Restful API from Peewee Models"
 authors = ["Binh Vu <binh@toan2.com>"]
 license = "MIT"

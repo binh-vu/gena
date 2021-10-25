@@ -1,5 +1,5 @@
 import axios from "axios";
-import { observable, flow, makeObservable } from "mobx";
+import { observable, flow, makeObservable, runInAction, action } from "mobx";
 import { CancellablePromise } from "mobx/dist/api/flow";
 import { DraftCreateRecord, DraftUpdateRecord, Record } from "./Record";
 import { RStore } from "./RStore";
@@ -24,6 +24,14 @@ export abstract class CRUDStore<
     makeObservable(this, {
       createDrafts: observable,
       updateDrafts: observable,
+      create: action,
+      update: action,
+      delete: action,
+      truncate: action,
+      setCreateDraft: action,
+      deleteCreateDraft: action,
+      setUpdateDraft: action,
+      deleteUpdateDraft: action,
     });
   }
 
@@ -51,6 +59,7 @@ export abstract class CRUDStore<
         let record = this.deserialize(resp.data);
 
         this.records.set(record.id, record);
+        this.index(record);
 
         if (discardDraft) {
           this.createDrafts.delete(draft.draftID);
@@ -79,7 +88,7 @@ export abstract class CRUDStore<
       let record = draft.toModel() || this.deserialize(resp.data);
       draft.markSaved();
       this.records.set(record.id, record);
-
+      this.index(record);
       this.state.value = "updated";
       return record;
     } catch (error: any) {
@@ -97,6 +106,7 @@ export abstract class CRUDStore<
       this.state.value = "updating";
 
       yield axios.delete(`${this.remoteURL}/${id}`);
+      this.deindex(id);
       this.records.delete(id);
       for (let listener of this.onDeleteListeners) {
         listener(id);
@@ -109,6 +119,34 @@ export abstract class CRUDStore<
       throw error;
     }
   });
+
+  /**
+   * Remove all records, will sync with the remote server
+   */
+  async truncate(): Promise<void> {
+    try {
+      this.state.value = "updating";
+      let resp = await axios.delete(`${this.remoteURL}`);
+
+      runInAction(() => {
+        for (let id of this.records.keys()) {
+          this.deindex(id);
+          for (let listener of this.onDeleteListeners) {
+            listener(id);
+          }
+        }
+
+        this.records.clear();
+        this.state.value = "updated";
+      });
+    } catch (error: any) {
+      runInAction(() => {
+        this.state.value = "error";
+      });
+      this.ajaxErrorHandler(error);
+      throw error;
+    }
+  }
 
   /**
    * Get a create draft from the store. Return undefined if does not exist
@@ -136,6 +174,11 @@ export abstract class CRUDStore<
   public deleteUpdateDraft(id: ID) {
     this.updateDrafts.delete(id);
   }
+
+  /**
+   * Remove a record (by id) from your indexes
+   */
+  protected deindex(id: ID): void {}
 
   /**
    * Serialize the update to send to the server

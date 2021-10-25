@@ -1,4 +1,6 @@
 import React from "react";
+import { Button } from "antd";
+import { ReactComponent } from "./route";
 import { PLATFORM } from "../env";
 import { PathDef, routeAPIs } from "./route";
 
@@ -21,12 +23,12 @@ interface InternalLinkProps<URLArgs, QueryArgs> {
   onFocus?: any;
   onBlur?: any;
 }
-interface InternalLinkState { }
+interface InternalLinkState {}
 
 export class InternalLink<URLArgs, QueryArgs> extends React.Component<
   InternalLinkProps<URLArgs, QueryArgs>,
   InternalLinkState
-  > {
+> {
   public state: InternalLinkState = {};
 
   onClick = (e: any) => {
@@ -55,6 +57,34 @@ export class InternalLink<URLArgs, QueryArgs> extends React.Component<
     );
   }
 }
+
+export const InternalLinkBtn = <URLArgs, QueryArgs>(
+  props: React.PropsWithChildren<{
+    path: PathDef<URLArgs, QueryArgs>;
+    urlArgs: URLArgs;
+    queryArgs: QueryArgs;
+    type?: "default" | "primary" | "text" | "link" | "dashed";
+    className?: string;
+    style?: object;
+  }>
+) => {
+  const onClick = (e: any) => {
+    props.path
+      .path(props.urlArgs, props.queryArgs)
+      .mouseClickNavigationHandler(e);
+  };
+
+  return (
+    <Button
+      type={props.type}
+      className={props.className}
+      style={props.style}
+      onClick={onClick}
+    >
+      {props.children}
+    </Button>
+  );
+};
 
 interface ExternalLinkProps {
   href: string;

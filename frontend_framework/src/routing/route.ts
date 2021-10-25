@@ -2,7 +2,7 @@ import { Location } from "history";
 import { PLATFORM } from "../env";
 import { createBrowserHistory, createMemoryHistory } from "history";
 import { Modal } from "antd";
-import { matchPath, RouteComponentProps } from "react-router";
+import { matchPath } from "react-router";
 import React from "react";
 
 function getUserConfirmation(
@@ -34,9 +34,9 @@ export const history =
         getUserConfirmation,
       });
 
-type ReactComponent =
-  | React.ComponentType<RouteComponentProps<any>>
-  | React.ComponentType<any>;
+export type ReactComponent =
+  | React.ComponentClass<any, any>
+  | React.FunctionComponent<any>;
 
 export class PathDef<URLArgs, QueryArgs> {
   // definition of a path in react-router styles. e.g., /accounts/:id
@@ -52,6 +52,7 @@ export class PathDef<URLArgs, QueryArgs> {
     strict: boolean;
     component: ReactComponent;
   };
+  public component: ReactComponent;
 
   public constructor(
     component: ReactComponent,
@@ -63,6 +64,7 @@ export class PathDef<URLArgs, QueryArgs> {
     this.exact = exact;
     this.strict = strict;
     this.routeDef = { path: pathDef, exact, strict, component };
+    this.component = component;
   }
 
   /**
@@ -130,6 +132,26 @@ export class PathDef<URLArgs, QueryArgs> {
     }
     return m.params as URLArgs;
   }
+
+  // /**
+  //  * Get query params of this route.
+  //  *
+  //  * @returns
+  //  *  - undefined the path doesn't match with the current URL or
+  //  *    requiredArgs doesn't appear in the query string
+  //  *  - null
+  //  */
+  // public getQueryArgs(location: Location<any>, requiredArgs: (keyof QueryArgs)[], optionalArgs: (keyof QueryArgs)[]): QueryArgs | undefined | null {
+  //   const m = matchPath(location.pathname, this.routeDef);
+  //   if (m === null) {
+  //     return undefined;
+  //   }
+
+  //   const params = new URLSearchParams(location.search);
+  //   const args = [];
+
+  //   return Object.fromEntries(params.entries()) as Partial<QueryArgs>;
+  // }
 }
 
 /**

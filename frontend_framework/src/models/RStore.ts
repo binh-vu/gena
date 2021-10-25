@@ -8,7 +8,8 @@ import {
   makeObservable,
 } from "mobx";
 import { CancellablePromise } from "mobx/dist/api/flow";
-import { Record } from "./Record";
+import { Record as DBRecord } from "./Record";
+import { message } from "antd";
 
 export class StoreState {
   public _value: "updating" | "updated" | "error" = "updated";
@@ -33,41 +34,70 @@ export class StoreState {
   }
 }
 
-export type QueryConditions = {
-  [field: string]:
+export type QueryConditions<R> = Partial<
+  Record<
+    keyof R,
     | string
     | number
     | boolean
-    | { op: "gt" | "lt" | "gte" | "lte" | "max"; value: string | number };
-};
+    | { op: "max"; value: (keyof R)[] }
+    | { op: "gt" | "lt" | "gte" | "lte"; value: string | number }
+  >
+>;
 
-export interface Query {
+export interface Query<R> {
   limit?: number;
   offset?: number;
-  fields?: string[];
-  conditions?: QueryConditions;
+  fields?: (keyof R)[];
+  conditions?: QueryConditions<R>;
   unique?: boolean;
   sortedBy?:
-    | string
-    | { field: string; order: "desc" | "asc" }
-    | { field: string; order: "desc" | "asc" }[];
+    | keyof R
+    | { field: keyof R; order: "desc" | "asc" }
+    | { field: keyof R; order: "desc" | "asc" }[];
+  groupBy?: (keyof R)[];
 }
 
 export type FetchResult<M> = { records: M[]; total: number };
 
-export abstract class RStore<ID extends string | number, M extends Record<ID>> {
+export abstract class RStore<
+  ID extends string | number,
+  M extends DBRecord<ID>
+> {
   public state: StoreState = new StoreState();
   public records: Map<ID, M> = new Map();
-  public ajaxErrorHandler: (error: AxiosError<any>) => void = () => {};
+  public ajaxErrorHandler: (error: AxiosError<any>) => void = (
+    error: AxiosError<any>
+  ) => {
+    message.error(
+      "Error while talking with the server. Check console for more details.",
+      10
+    );
+    console.error(error);
+  };
+  public field2name: Partial<Record<keyof M, string>>;
+  public name2field: Partial<Record<string, keyof M>>;
+  public nameAndField: [string, keyof M][];
 
   protected remoteURL: string;
 
-  constructor(remoteURL: string) {
+  constructor(
+    remoteURL: string,
+    field2name?: Partial<Record<keyof M, string>>
+  ) {
     this.remoteURL = remoteURL;
+    this.field2name = field2name || {};
+    this.nameAndField = Object.entries(this.field2name).map(
+      ([key, value]) => [value, key] as [string, keyof M]
+    );
+    this.name2field = Object.fromEntries(this.nameAndField);
+
     makeObservable(this, {
       state: observable,
       records: observable,
       fetch: action,
+      fetchOne: action,
+      fetchSome: action,
       set: action,
       list: computed,
     });
@@ -82,6 +112,13 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
       this.fetch(id);
     }
     return this.records.get(id);
+  }
+
+  /**
+   * Get the number of records in the table
+   */
+  async remoteSize() {
+    return (await this.query({ limit: 1 })).total;
   }
 
   /**
@@ -121,7 +158,7 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
   }
 
   /** Fetch one record from the remote server */
-  async fetchOne(query: Query): Promise<M | undefined> {
+  async fetchOne(query: Query<M>): Promise<M | undefined> {
     try {
       this.state.value = "updating";
       query.limit = 1;
@@ -163,8 +200,8 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
   /**
    * Fetch mutliple records from remote server
    */
-  public fetchSome: (query: Query) => CancellablePromise<FetchResult<M>> = flow(
-    function* (this: RStore<ID, M>, query: Query) {
+  public fetchSome: (query: Query<M>) => CancellablePromise<FetchResult<M>> =
+    flow(function* (this: RStore<ID, M>, query: Query<M>) {
       try {
         this.state.value = "updating";
         const result = yield this.query(query);
@@ -180,24 +217,30 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
         this.state.value = "error";
         throw error;
       }
-    }
-  );
+    });
 
   /** Query records (not store the result) */
-  async query(query: Query): Promise<FetchResult<M>> {
+  async query(query: Query<M>): Promise<FetchResult<M>> {
     let params: any = {
       limit: query.limit,
       offset: query.offset,
       unique: query.unique,
     };
     if (query.fields !== undefined) {
-      params.fields = query.fields.join(",");
+      params.fields = query.fields
+        .map((field) => this.field2name[field] || field)
+        .join(",");
     }
 
     if (query.conditions !== undefined) {
-      for (const [field, op_or_val] of Object.entries(query.conditions)) {
+      for (let [field, op_or_val] of Object.entries(query.conditions)) {
+        field = this.field2name[field as keyof M] || field;
         if (typeof op_or_val === "object") {
-          params[`${field}[${op_or_val.op}]`] = op_or_val.value;
+          if (op_or_val.op === "max") {
+            params[`${field}[${op_or_val.op}]`] = op_or_val.value.join(",");
+          } else {
+            params[`${field}[${op_or_val.op}]`] = op_or_val.value;
+          }
         } else {
           params[`${field}`] = op_or_val;
         }
@@ -207,14 +250,22 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
     if (Array.isArray(query.sortedBy)) {
       params.sorted_by = query.sortedBy
         .map((item) => {
-          return item.order === "asc" ? item.field : `-${item.field}`;
+          const field = this.field2name[item.field] || item.field;
+          return item.order === "asc" ? field : `-${field}`;
         })
         .join(",");
     } else if (typeof query.sortedBy === "object") {
-      const { order, field } = query.sortedBy;
-      params.sorted_by = order === "asc" ? field : `-${field}`;
+      const field =
+        this.field2name[query.sortedBy.field] || query.sortedBy.field;
+      params.sorted_by = query.sortedBy.order === "asc" ? field : `-${field}`;
     } else {
-      params.sorted_by = query.sortedBy;
+      params.sorted_by = this.field2name[query.sortedBy] || query.sortedBy;
+    }
+
+    if (query.groupBy !== undefined) {
+      params.group_by = query.groupBy
+        .map((field) => this.field2name[field] || field)
+        .join(",");
     }
 
     let resp: any;
@@ -301,24 +352,47 @@ export abstract class RStore<ID extends string | number, M extends Record<ID>> {
   }
 
   /**
+   * Group records by values of some fields
+   */
+  public groupBy(groupedFields: (keyof M)[], records: M[]): M[][] {
+    let output: { [k: string]: M[] } = {};
+    for (const r of records) {
+      const key = groupedFields.map((field) => r[field]).join("$");
+      if (output[key] === undefined) {
+        output[key] = [r];
+      } else {
+        output[key].push(r);
+      }
+    }
+
+    return Object.values(output);
+  }
+
+  /**
    * Deserialize the data sent from the server to a record
    */
   public deserialize(record: any): M {
+    if (this.nameAndField.length > 0) {
+      for (const [name, field] of this.nameAndField) {
+        record[field] = record[name];
+        delete record[name];
+      }
+    }
     return record;
   }
 
   /**
-   * A function to build a custom index
+   * Add a record to your indexes. Its implementation must be IDEMPOTENT
    */
   protected index(record: M): void {}
 
   /** Encode a query condition so its can be shared through URL */
-  public encodeWhereQuery(condition: QueryConditions) {
+  public encodeWhereQuery(condition: QueryConditions<M>) {
     return btoa(JSON.stringify(condition));
   }
 
   /** Decode a query back to its original form */
-  public decodeWhereQuery(encodedCondition: string): QueryConditions {
+  public decodeWhereQuery(encodedCondition: string): QueryConditions<M> {
     return JSON.parse(atob(encodedCondition));
   }
 }
