@@ -1,6 +1,6 @@
 import React from "react";
-import { Button } from "antd";
-import { ReactComponent } from "./route";
+import { Button, ButtonProps } from "antd";
+import { ArgSchema, ArgType } from "./route";
 import { PLATFORM } from "../env";
 import { PathDef, routeAPIs } from "./route";
 
@@ -8,66 +8,39 @@ import { PathDef, routeAPIs } from "./route";
  * This file contains all helper to dealing with Links and Navigation in the application so that we can handle it easier in different platforms
  */
 
-interface InternalLinkProps<URLArgs, QueryArgs> {
-  path: PathDef<URLArgs, QueryArgs>;
-  urlArgs: URLArgs;
-  queryArgs: QueryArgs;
-  className?: string;
-  style?: object;
-  // other properties are for passing down dynamically from parent to <a> element
-  onContextMenu?: any;
-  onMouseDown?: any;
-  onTouchStart?: any;
-  onMouseEnter?: any;
-  onMouseLeave?: any;
-  onFocus?: any;
-  onBlur?: any;
-}
-interface InternalLinkState {}
-
-export class InternalLink<URLArgs, QueryArgs> extends React.Component<
-  InternalLinkProps<URLArgs, QueryArgs>,
-  InternalLinkState
-> {
-  public state: InternalLinkState = {};
-
-  onClick = (e: any) => {
-    this.props.path
-      .path(this.props.urlArgs, this.props.queryArgs)
-      .mouseClickNavigationHandler(e);
+export const InternalLink = <
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+>(
+  props: {
+    path: PathDef<U, Q>;
+    urlArgs: ArgSchema<U>;
+    queryArgs: ArgSchema<Q>;
+  } & Omit<React.HTMLProps<HTMLAnchorElement>, "onClick">
+) => {
+  const { path, urlArgs, queryArgs, children, ...restprops } = props;
+  const onClick = (e: any) => {
+    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e);
   };
 
-  render() {
-    return (
-      <a
-        href={this.props.path.getURL(this.props.urlArgs, this.props.queryArgs)}
-        onClick={this.onClick}
-        style={this.props.style}
-        className={this.props.className}
-        onContextMenu={this.props.onContextMenu}
-        onMouseDown={this.props.onMouseDown}
-        onTouchStart={this.props.onTouchStart}
-        onMouseEnter={this.props.onMouseEnter}
-        onMouseLeave={this.props.onMouseLeave}
-        onFocus={this.props.onFocus}
-        onBlur={this.props.onBlur}
-      >
-        {this.props.children}
-      </a>
-    );
-  }
-}
+  return (
+    <a href={path.getURL(urlArgs, queryArgs)} onClick={onClick} {...restprops}>
+      {children}
+    </a>
+  );
+};
 
-export const InternalLinkBtn = <URLArgs, QueryArgs>(
-  props: React.PropsWithChildren<{
-    path: PathDef<URLArgs, QueryArgs>;
-    urlArgs: URLArgs;
-    queryArgs: QueryArgs;
-    type?: "default" | "primary" | "text" | "link" | "dashed";
-    className?: string;
-    style?: object;
-  }>
+export const InternalLinkBtn = <
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+>(
+  props: {
+    path: PathDef<U, Q>;
+    urlArgs: ArgSchema<U>;
+    queryArgs: ArgSchema<Q>;
+  } & Omit<ButtonProps, "onClick">
 ) => {
+  const { path, urlArgs, queryArgs, children, ...restprops } = props;
   const onClick = (e: any) => {
     props.path
       .path(props.urlArgs, props.queryArgs)
@@ -75,32 +48,27 @@ export const InternalLinkBtn = <URLArgs, QueryArgs>(
   };
 
   return (
-    <Button
-      type={props.type}
-      className={props.className}
-      style={props.style}
-      onClick={onClick}
-    >
-      {props.children}
+    <Button onClick={onClick} {...restprops}>
+      {children}
     </Button>
   );
 };
 
-interface ExternalLinkProps {
-  href: string;
-  openInNewPage?: boolean;
-}
-
-export const ExternalLink: React.FunctionComponent<ExternalLinkProps> = ({
+export const ExternalLink = ({
   href,
   openInNewPage = false,
   children,
-}) => {
+  ...restprops
+}: {
+  href: string;
+  openInNewPage?: boolean;
+} & Omit<React.HTMLProps<HTMLAnchorElement>, "href" | "target" | "rel">) => {
   return (
     <a
       href={href}
       target={openInNewPage ? "_blank" : undefined}
       rel="noopener noreferrer"
+      {...restprops}
     >
       {children}
     </a>

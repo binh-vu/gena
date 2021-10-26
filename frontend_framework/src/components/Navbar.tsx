@@ -58,7 +58,7 @@ export const CenterNavBar = withStyles(css)(
   }: Props<R> & WithStyles<typeof css>) => {
     const location = useLocation();
     const openMenu = (e: { key: keyof R }) => {
-      routes[e.key].path(null, null).open();
+      routes[e.key].path({}, {}).open();
     };
 
     const items = Object.keys(menus).map((routeName, index) => {
@@ -97,7 +97,7 @@ export const LeftNavBar = withStyles(css)(
   }: Props<R> & WithStyles<typeof css>) => {
     const location = useLocation();
     const openMenu = (e: { key: keyof R }) => {
-      routes[e.key].path(null, null).open();
+      routes[e.key].path({}, {}).open();
     };
 
     const items = Object.keys(menus).map((routeName, index) => {

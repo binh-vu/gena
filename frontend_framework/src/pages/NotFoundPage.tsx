@@ -3,8 +3,10 @@ import { Result, Space, Button } from "antd";
 import { routeAPIs } from "../routing";
 import { NoArgsPathDef } from "../routing/route";
 
-const onClickGoHome = new NoArgsPathDef(() => null, "/", true).path()
-  .mouseClickNavigationHandler;
+const onClickGoHome = new NoArgsPathDef({
+  component: () => null,
+  pathDef: "/",
+}).path().mouseClickNavigationHandler;
 
 const NotFoundPage: React.FunctionComponent<{}> = () => {
   return (

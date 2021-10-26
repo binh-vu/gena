@@ -2,8 +2,8 @@ import { Location } from "history";
 import { PLATFORM } from "../env";
 import { createBrowserHistory, createMemoryHistory } from "history";
 import { Modal } from "antd";
-import { matchPath } from "react-router";
-import React from "react";
+import { matchPath, useLocation } from "react-router";
+import React, { useMemo } from "react";
 
 function getUserConfirmation(
   message: string,
@@ -38,7 +38,27 @@ export type ReactComponent =
   | React.ComponentClass<any, any>
   | React.FunctionComponent<any>;
 
-export class PathDef<URLArgs, QueryArgs> {
+export type ArgType = {
+  string: string;
+  number: number;
+  boolean: boolean;
+  optionalstring: string | undefined;
+  optionalnumber: number | undefined;
+  optionalboolean: number | undefined;
+};
+
+export type ArgSchema<T extends Record<string, keyof ArgType>> = {
+  [K in keyof T]: ArgType[T[K]];
+};
+
+export class PathDef<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+> {
+  // contain the schema of url parameters
+  protected urlSchema: U;
+  // contain the schema of query parameters
+  protected querySchema: Q;
   // definition of a path in react-router styles. e.g., /accounts/:id
   public pathDef: string;
   // is equivalent to the `exact` property of the Route component in react-router (whether it should match with its descendant)
@@ -54,12 +74,23 @@ export class PathDef<URLArgs, QueryArgs> {
   };
   public component: ReactComponent;
 
-  public constructor(
-    component: ReactComponent,
-    pathDef: string,
-    exact: boolean = false,
-    strict: boolean = false
-  ) {
+  public constructor({
+    urlSchema = {} as U,
+    querySchema = {} as Q,
+    component,
+    pathDef,
+    exact = false,
+    strict = false,
+  }: {
+    urlSchema?: U;
+    querySchema?: Q;
+    component: ReactComponent;
+    pathDef: string;
+    exact?: boolean;
+    strict?: boolean;
+  }) {
+    this.urlSchema = urlSchema;
+    this.querySchema = querySchema;
     this.pathDef = pathDef;
     this.exact = exact;
     this.strict = strict;
@@ -74,7 +105,7 @@ export class PathDef<URLArgs, QueryArgs> {
    * since it won't follow the semantic of react-router but more like when you open a link
    * at the first time in the browser (that's why for hash history, we have to add `#`)
    */
-  public getURL(urlArgs: URLArgs, queryArgs: QueryArgs): string {
+  public getURL(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): string {
     let path = this.pathDef;
 
     if (urlArgs !== null) {
@@ -83,8 +114,9 @@ export class PathDef<URLArgs, QueryArgs> {
       }
     }
 
-    if (queryArgs !== null) {
-      path = `${path}?${new URLSearchParams(queryArgs as any).toString()}`;
+    const query = new URLSearchParams(queryArgs as any).toString();
+    if (query.length > 0) {
+      path = `${path}?${query}`;
     }
 
     return path;
@@ -93,20 +125,21 @@ export class PathDef<URLArgs, QueryArgs> {
   /**
    * Create a location that the history object can be pushed
    */
-  public location(urlArgs: URLArgs, queryArgs: QueryArgs): Location<any> {
+  public location(
+    urlArgs: ArgSchema<U>,
+    queryArgs: ArgSchema<Q>
+  ): Location<any> {
     let path = this.pathDef;
-    if (urlArgs !== null) {
-      for (let v in urlArgs) {
-        path = path.replace(`:${v}`, urlArgs[v] as any as string);
-      }
+    for (let v in urlArgs) {
+      path = path.replace(`:${v}`, urlArgs[v] as any as string);
     }
+
+    let query = new URLSearchParams(queryArgs as any).toString();
+    query = query.length > 0 ? `?${query}` : query;
 
     return {
       pathname: path,
-      search:
-        queryArgs === null || queryArgs === undefined
-          ? ""
-          : "?" + new URLSearchParams(queryArgs as any).toString(),
+      search: query,
       hash: "",
       state: undefined,
     };
@@ -115,109 +148,223 @@ export class PathDef<URLArgs, QueryArgs> {
   /**
    * Build a path that can be used to navigate to a link
    */
-  public path(
-    urlArgs: URLArgs,
-    queryArgs: QueryArgs
-  ): Path<URLArgs, QueryArgs> {
+  public path(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): Path<U, Q> {
     return new Path(this, urlArgs, queryArgs);
   }
 
-  /**
-   * Get URL params of this route
-   */
-  public getURLArgs(location: Location<any>): URLArgs | undefined {
-    const m = matchPath(location.pathname, this.routeDef);
-    if (m === null) {
-      return undefined;
-    }
-    return m.params as URLArgs;
+  /** React hook to get URL parameters */
+  public useURLParams(): ArgSchema<U> | null {
+    const location = useLocation();
+    return useMemo(() => this.getURLArgs(location), [location.pathname]);
   }
 
-  // /**
-  //  * Get query params of this route.
-  //  *
-  //  * @returns
-  //  *  - undefined the path doesn't match with the current URL or
-  //  *    requiredArgs doesn't appear in the query string
-  //  *  - null
-  //  */
-  // public getQueryArgs(location: Location<any>, requiredArgs: (keyof QueryArgs)[], optionalArgs: (keyof QueryArgs)[]): QueryArgs | undefined | null {
-  //   const m = matchPath(location.pathname, this.routeDef);
-  //   if (m === null) {
-  //     return undefined;
-  //   }
+  /** React hook to get query parameters */
+  public useQueryParams() {
+    const location = useLocation();
+    return useMemo(() => this.getQueryArgs(location), [location.search]);
+  }
 
-  //   const params = new URLSearchParams(location.search);
-  //   const args = [];
+  /** React hook to get parameters */
+  public useParams(): { url: ArgSchema<U> | null; query: ArgSchema<Q> | null } {
+    return { url: this.useURLParams(), query: this.useQueryParams() };
+  }
 
-  //   return Object.fromEntries(params.entries()) as Partial<QueryArgs>;
-  // }
+  /**
+   * Get URL params of this route.
+   * @returns null if the route doesn't match or any parameter fails to pass the runtime type check
+   */
+  public getURLArgs(location: Location<any>): ArgSchema<U> | null {
+    const m = matchPath(location.pathname, this.routeDef);
+    if (m === null) {
+      return null;
+    }
+    return this.parse(m.params as any, this.urlSchema);
+  }
+
+  /**
+   * Get query params of this route
+   * @returns null if the route doesn't match or any parameter fails to pass the runtime type check
+   */
+  public getQueryArgs(location: Location<any>): ArgSchema<Q> | null {
+    const params = new URLSearchParams(location.search);
+    const query = this.parse(
+      Object.fromEntries(params.entries()),
+      this.querySchema
+    );
+    if (query !== null && Object.values(query).every((x) => x === undefined)) {
+      return null;
+    }
+    return query;
+  }
+
+  /**
+   * Parse the object with the schema
+   *
+   * @param object
+   * @param schema
+   * @returns
+   */
+  protected parse<T extends Record<string, keyof ArgType>>(
+    object: any,
+    schema: T
+  ): ArgSchema<T> | null {
+    const output = {} as any;
+    for (const [prop, propType] of Object.entries(schema)) {
+      const value = object[prop];
+      switch (propType) {
+        case "number":
+          if (value === undefined) {
+            return null;
+          }
+          output[prop] = parseFloat(value);
+          if (!Number.isFinite(output[prop])) {
+            return null;
+          }
+          break;
+        case "boolean":
+          if (value === undefined || value !== "true" || value !== "false") {
+            return null;
+          }
+          output[prop] = value === "true";
+          break;
+        case "string":
+          if (value === undefined) {
+            return null;
+          }
+          output[prop] = value;
+          break;
+        case "optionalnumber":
+          if (value === undefined) {
+            continue;
+          }
+          output[prop] = parseFloat(value);
+          if (!Number.isFinite(output[prop])) {
+            return null;
+          }
+          break;
+        case "optionalboolean":
+          if (value === undefined) {
+            continue;
+          }
+          if (value !== "true" || value !== "false") {
+            return null;
+          }
+          output[prop] = value === "true";
+          break;
+        case "optionalstring":
+          if (value === undefined) {
+            continue;
+          }
+          output[prop] = value;
+          break;
+      }
+    }
+    return output as ArgSchema<T>;
+  }
 }
 
 /**
  * Overwrite the PathDef class to provide a better using experience
  */
-export class NoArgsPathDef extends PathDef<null, null> {
-  private _path: Path<null, null>;
-
-  public constructor(
-    component: ReactComponent,
-    pathDef: string,
-    exact: boolean = false,
-    strict: boolean = false
-  ) {
-    super(component, pathDef, exact, strict);
-    this._path = new Path(this, null, null);
-  }
-
+export class NoArgsPathDef extends PathDef<{}, {}> {
   public getURL(): string {
-    return super.getURL(null, null);
+    return super.getURL({}, {});
   }
 
   public location(): Location<any> {
-    return super.location(null, null);
+    return super.location({}, {});
   }
 
-  public path(): Path<null, null> {
-    return this._path;
+  public path(): Path<{}, {}> {
+    return super.path({}, {});
   }
 }
 
 /**
  * Overwrite the PathDef class to provide a better using experience
  */
-export class NoQueryArgsPathDef<URLArgs> extends PathDef<URLArgs, null> {
-  public constructor(
-    component: ReactComponent,
-    pathDef: string,
-    exact: boolean = false,
-    strict: boolean = false
-  ) {
-    super(component, pathDef, exact, strict);
+export class NoQueryArgsPathDef<
+  U extends Record<string, keyof ArgType>
+> extends PathDef<U, {}> {
+  public getURL(urlArgs: ArgSchema<U>): string {
+    return super.getURL(urlArgs, {});
   }
 
-  public getURL(urlArgs: URLArgs): string {
-    return super.getURL(urlArgs, null);
+  public location(urlArgs: ArgSchema<U>): Location<any> {
+    return super.location(urlArgs, {});
   }
 
-  public location(urlArgs: URLArgs): Location<any> {
-    return super.location(urlArgs, null);
-  }
-
-  public path(urlArgs: URLArgs): Path<URLArgs, null> {
-    return new Path(this, urlArgs, null);
+  public path(urlArgs: ArgSchema<U>): Path<U, {}> {
+    return super.path(urlArgs, {});
   }
 }
 
-class Path<URLArgs, QueryArgs> {
-  private pathDef: PathDef<URLArgs, QueryArgs>;
-  private urlArgs: URLArgs;
-  private queryArgs: QueryArgs;
+export class NoURLArgsPathDef<
+  Q extends Record<string, keyof ArgType>
+> extends PathDef<{}, Q> {
+  public getURL(queryArgs: ArgSchema<Q>): string {
+    return super.getURL({}, queryArgs);
+  }
+
+  public location(queryArgs: ArgSchema<Q>): Location<any> {
+    return super.location({}, queryArgs);
+  }
+
+  public path(queryArgs: ArgSchema<Q>): Path<{}, Q> {
+    return super.path({}, queryArgs);
+  }
+}
+
+export class OptionalQueryArgsPathDef<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+> extends PathDef<U, Q> {
+  public getURL(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): string {
+    return super.getURL(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  }
+
+  public location(
+    urlArgs: ArgSchema<U>,
+    queryArgs?: ArgSchema<Q>
+  ): Location<any> {
+    return super.location(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  }
+
+  public path(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): Path<U, Q> {
+    return super.path(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  }
+}
+
+/** Use for path that doesn't have any url parameters but its query parameters can be optional */
+export class NoURLArgsOptionalQueryArgsPathDef<
+  Q extends Record<string, keyof ArgType>
+> extends PathDef<{}, Q> {
+  // union of U & Q in order to not break Liskov substitution principle, as u is empty, this is exactly what we wanted
+  public getURL(queryArgs: ArgSchema<Q> | ArgSchema<{}> = {}): string {
+    return super.getURL({}, queryArgs as ArgSchema<Q>);
+  }
+
+  public location(queryArgs: ArgSchema<Q> | ArgSchema<{}>): Location<any> {
+    return super.location({}, queryArgs as ArgSchema<Q>);
+  }
+
+  public path(queryArgs: ArgSchema<Q> | ArgSchema<{}> = {}): Path<{}, Q> {
+    return super.path({}, queryArgs as ArgSchema<Q>);
+  }
+}
+
+class Path<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+> {
+  private pathDef: PathDef<U, Q>;
+  private urlArgs: ArgSchema<U>;
+  private queryArgs: ArgSchema<Q>;
 
   public constructor(
-    pathDef: PathDef<URLArgs, QueryArgs>,
-    urlArgs: URLArgs,
-    queryArgs: QueryArgs
+    pathDef: PathDef<U, Q>,
+    urlArgs: ArgSchema<U>,
+    queryArgs: ArgSchema<Q>
   ) {
     this.pathDef = pathDef;
     this.urlArgs = urlArgs;

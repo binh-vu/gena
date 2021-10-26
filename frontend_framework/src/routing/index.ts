@@ -1,6 +1,6 @@
 import { Location } from "history";
 import { matchPath } from "react-router";
-import { PathDef, ReactComponent } from "./route";
+import { PathDef, ReactComponent, ArgType } from "./route";
 export {
   ExternalLink,
   InternalHTMLLink,
@@ -9,10 +9,12 @@ export {
 } from "./Link";
 export {
   history,
-  PathDef,
+  PathDef as PathDef,
   routeAPIs,
   NoArgsPathDef,
   NoQueryArgsPathDef,
+  NoURLArgsOptionalQueryArgsPathDef,
+  OptionalQueryArgsPathDef,
 } from "./route";
 
 /**
@@ -71,4 +73,4 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
   }
 }
 
-export type { ReactComponent };
+export type { ReactComponent, ArgType };
