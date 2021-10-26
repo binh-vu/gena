@@ -335,24 +335,6 @@ export class OptionalQueryArgsPathDef<
   }
 }
 
-/** Use for path that doesn't have any url parameters but its query parameters can be optional */
-export class NoURLArgsOptionalQueryArgsPathDef<
-  Q extends Record<string, keyof ArgType>
-> extends PathDef<{}, Q> {
-  // union of U & Q in order to not break Liskov substitution principle, as u is empty, this is exactly what we wanted
-  public getURL(queryArgs: ArgSchema<Q> | ArgSchema<{}> = {}): string {
-    return super.getURL({}, queryArgs as ArgSchema<Q>);
-  }
-
-  public location(queryArgs: ArgSchema<Q> | ArgSchema<{}>): Location<any> {
-    return super.location({}, queryArgs as ArgSchema<Q>);
-  }
-
-  public path(queryArgs: ArgSchema<Q> | ArgSchema<{}> = {}): Path<{}, Q> {
-    return super.path({}, queryArgs as ArgSchema<Q>);
-  }
-}
-
 class Path<
   U extends Record<string, keyof ArgType>,
   Q extends Record<string, keyof ArgType>
