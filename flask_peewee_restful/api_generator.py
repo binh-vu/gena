@@ -140,13 +140,12 @@ def generate_api(
                 raise BadRequest(f"Does not support multiple aggregations")
             # update the select to keep the id
             subquery = query.select(*[c.alias(f"gb_c{i}") for i, c in enumerate(group_by)]) \
-                .limit(limit) \
-                .offset(offset)
+                .group_by(*group_by)
 
             predicate = group_by[0] == getattr(subquery.c, "gb_c0")
             for i, c in enumerate(group_by[1:], start=1):
                 predicate = predicate & (c == getattr(subquery.c, f"gb_c{i}"))
-            query = query.join(subquery, on=predicate)
+            query = query.join(subquery.limit(limit).offset(offset), on=predicate)
             # they want to get only one record so we save computation knowing that it won't use anyway
             total = subquery.count() if limit > 1 else 1
         else:

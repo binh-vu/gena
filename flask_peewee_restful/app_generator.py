@@ -15,7 +15,6 @@ def generate_app(
     if log_sql_queries and os.environ.get("FLASK_ENV", "") == "development":
         # if debugging, log the SQL queries
         logger = logging.getLogger("peewee")
-        logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.DEBUG)
 
     app = Flask(
