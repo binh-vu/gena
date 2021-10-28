@@ -147,7 +147,7 @@ def generate_api(
                 predicate = predicate & (c == getattr(subquery.c, f"gb_c{i}"))
             query = query.join(subquery.limit(limit).offset(offset), on=predicate)
             # they want to get only one record so we save computation knowing that it won't use anyway
-            total = subquery.count() if limit > 1 else 1
+            total = subquery.count()
         else:
             for name, ops in pending_ops.items():
                 field = name2field[name]
@@ -179,9 +179,9 @@ def generate_api(
                         predicate = (Model.id == subquery.c.id) & (field == getattr(subquery.c, field_alias))
                         query = query.join(subquery, on=predicate)
 
-            query = query.limit(limit).offset(offset)
             # they want to get only one record so we save computation knowing that it won't use anyway
-            total = query.count() if limit > 1 else 1
+            total = query.count()
+            query = query.limit(limit).offset(offset)
 
         # perform the query
         items = batch_serialize(query)
