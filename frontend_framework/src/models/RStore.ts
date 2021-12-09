@@ -77,10 +77,17 @@ export abstract class RStore<
   };
   public field2name: Partial<Record<keyof M, string>>;
   public name2field: Partial<Record<string, keyof M>>;
+  // a list of (field name in the remote API, field name in the record)
   public nameAndField: [string, keyof M][];
 
   protected remoteURL: string;
 
+  /**
+   * Constructor
+   *
+   * @param remoteURL RESTful endpoint for this store
+   * @param field2name mapping from Record's field to the corresponding field name in the RESTful API
+   */
   constructor(
     remoteURL: string,
     field2name?: Partial<Record<keyof M, string>>

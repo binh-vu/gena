@@ -13,7 +13,7 @@ def generate_api(
     Model: Type[PeeweeModel],
     serialize: Optional[Callable[[Any], dict]] = None,
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
-    enable_truncate_table: bool = False
+    enable_truncate_table: bool = False,
 ):
     name2field = {name: field for name, field in Model._meta.fields.items()}
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by", "group_by"}
@@ -70,7 +70,7 @@ def generate_api(
         # construct order by clause
         order_by = []
         if "sorted_by" in request.args:
-            for field in request.args['sorted_by'].split(","):
+            for field in request.args["sorted_by"].split(","):
                 try:
                     if field.startswith("-"):
                         field = field[1:]
@@ -86,7 +86,7 @@ def generate_api(
         # construct group by clause
         group_by = []
         if "group_by" in request.args:
-            for field in request.args['group_by'].split(","):
+            for field in request.args["group_by"].split(","):
                 if field not in name2field:
                     raise BadRequest(f"Invalid field name: {field}")
                 group_by.append(name2field[field])
@@ -103,10 +103,10 @@ def generate_api(
             name = m.group("name")
             if name not in name2field:
                 raise BadRequest(f"Invalid field name: {name}")
-            
+
             op = m.group("op")
             filter_fields[name].append((op, value))
-        
+
         pending_ops = defaultdict(dict)
         conditions = defaultdict(list)
         for name, ops in filter_fields.items():
@@ -139,8 +139,9 @@ def generate_api(
             if len(pending_ops) > 0:
                 raise BadRequest(f"Does not support multiple aggregations")
             # update the select to keep the id
-            subquery = query.select(*[c.alias(f"gb_c{i}") for i, c in enumerate(group_by)]) \
-                .group_by(*group_by)
+            subquery = query.select(
+                *[c.alias(f"gb_c{i}") for i, c in enumerate(group_by)]
+            ).group_by(*group_by)
 
             predicate = group_by[0] == getattr(subquery.c, "gb_c0")
             for i, c in enumerate(group_by[1:], start=1):
@@ -164,19 +165,25 @@ def generate_api(
                             subquery_group_fields.append(name2field[gfield])
                             if gfield in conditions:
                                 if gfield in pending_ops:
-                                    raise BadRequest(f"Does not support multiple aggregations")
+                                    raise BadRequest(
+                                        f"Does not support multiple aggregations"
+                                    )
                                 subquery_group_field_conditions += conditions[gfield]
 
                         subquery_name = f"{name}_{op}"
                         field_alias = f"{subquery_name}_{name}"
-                        subquery = Model.select(Model.id, fn.MAX(field).alias(field_alias)) \
-                            .group_by(*subquery_group_fields) \
+                        subquery = (
+                            Model.select(Model.id, fn.MAX(field).alias(field_alias))
+                            .group_by(*subquery_group_fields)
                             .alias(subquery_name)
+                        )
 
                         if len(subquery_group_field_conditions) > 0:
                             subquery = subquery.where(*subquery_group_field_conditions)
 
-                        predicate = (Model.id == subquery.c.id) & (field == getattr(subquery.c, field_alias))
+                        predicate = (Model.id == subquery.c.id) & (
+                            field == getattr(subquery.c, field_alias)
+                        )
                         query = query.join(subquery, on=predicate)
 
             # they want to get only one record so we save computation knowing that it won't use anyway
@@ -186,15 +193,9 @@ def generate_api(
         # perform the query
         items = batch_serialize(query)
         if len(fields) > 0:
-            items = [
-                {k: item[k] for k in field_names}
-                for item in items
-            ]
+            items = [{k: item[k] for k in field_names} for item in items]
 
-        return jsonify({
-            "items": items,
-            "total": total
-        })
+        return jsonify({"items": items, "total": total})
 
     @bp.route(f"/{table_name}/<id>", methods=["GET"])
     def get_one(id):
@@ -206,12 +207,11 @@ def generate_api(
         return jsonify(serialize(record))
 
     if enable_truncate_table:
+
         @bp.route(f"/{table_name}", methods=["DELETE"])
         def truncate():
             Model.truncate_table()
-            return jsonify({
-                "status": "success"
-            })
+            return jsonify({"status": "success"})
 
     return bp
 
@@ -224,28 +224,30 @@ def generate_api_4dict(
 ):
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by"}
     field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
+    if batch_serialize is None:
+        assert serialize is not None
+        batch_serialize = lambda lst: [serialize(item) for item in lst]
 
     bp = Blueprint(name, name)
 
     @bp.route(f"/{name}/find_by_ids", methods=["POST"])
     def find_by_ids():
-        if 'ids' not in request.json:
+        if "ids" not in request.json:
             raise BadRequest("Bad request. Missing `ids`")
 
         ids = []
         ents = []
-        for id in request.json['ids']:
+        for id in request.json["ids"]:
             if id in id2ent:
                 ents.append(id)
                 ids.append(id)
 
-        return jsonify({
-            "items": dict(zip(ids, batch_serialize(ents))),
-            "total": len(ents)
-        })
+        return jsonify(
+            {"items": dict(zip(ids, batch_serialize(ents))), "total": len(ents)}
+        )
 
     @bp.route(f"/{name}/<id>", methods=["GET"])
-    def get_one(id: str):
+    def find_by_id(id: str):
         if id not in id2ent:
             raise NotFound(f"Record {id} does not exist")
         return jsonify(serialize(id2ent[id]))
