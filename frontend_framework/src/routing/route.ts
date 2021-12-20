@@ -154,13 +154,17 @@ export class PathDef<
 
   /** React hook to get URL parameters */
   public useURLParams(): ArgSchema<U> | null {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const location = useLocation();
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
     return useMemo(() => this.getURLArgs(location), [location.pathname]);
   }
 
   /** React hook to get query parameters */
   public useQueryParams() {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const location = useLocation();
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
     return useMemo(() => this.getQueryArgs(location), [location.search]);
   }
 

@@ -9,7 +9,7 @@ export {
 } from "./Link";
 export {
   history,
-  PathDef as PathDef,
+  PathDef,
   routeAPIs,
   NoArgsPathDef,
   NoQueryArgsPathDef,

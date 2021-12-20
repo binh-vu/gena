@@ -239,7 +239,7 @@ def generate_api_4dict(
         ents = []
         for id in request.json["ids"]:
             if id in id2ent:
-                ents.append(id)
+                ents.append(id2ent[id])
                 ids.append(id)
 
         return jsonify(

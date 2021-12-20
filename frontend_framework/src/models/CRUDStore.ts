@@ -1,7 +1,11 @@
 import axios from "axios";
 import { observable, flow, makeObservable, runInAction, action } from "mobx";
 import { CancellablePromise } from "mobx/dist/api/flow";
-import { DraftCreateRecord, DraftUpdateRecord, Record } from "./Record";
+import {
+  DraftCreateRecord,
+  DraftUpdateRecord,
+  Record as DBRecord,
+} from "./Record";
 import { RStore } from "./RStore";
 
 /**
@@ -11,7 +15,7 @@ export abstract class CRUDStore<
   ID extends string | number,
   C extends DraftCreateRecord,
   U extends DraftUpdateRecord<ID, M>,
-  M extends Record<ID>
+  M extends DBRecord<ID>
 > extends RStore<ID, M> {
   public createDrafts: Map<string, C> = new Map();
   public updateDrafts: Map<ID, U> = new Map();
@@ -19,8 +23,20 @@ export abstract class CRUDStore<
   protected createAJAXParams = { URL: undefined as any, config: {} };
   protected onDeleteListeners: ((id: ID) => void)[] = [];
 
-  constructor(remoteURL: string) {
-    super(remoteURL);
+  /**
+   * Constructor
+   *
+   * @param remoteURL RESTful endpoint for this store
+   * @param field2name mapping from Record's field to the corresponding field name in the RESTful API
+   * @param refetch whether to refetch the entity if it is already in the store
+   */
+  constructor(
+    remoteURL: string,
+    field2name?: Partial<Record<keyof M, string>>,
+    refetch?: boolean
+  ) {
+    super(remoteURL, field2name, refetch);
+
     makeObservable(this, {
       createDrafts: observable,
       updateDrafts: observable,
@@ -126,7 +142,7 @@ export abstract class CRUDStore<
   async truncate(): Promise<void> {
     try {
       this.state.value = "updating";
-      let resp = await axios.delete(`${this.remoteURL}`);
+      await axios.delete(`${this.remoteURL}`);
 
       runInAction(() => {
         for (let id of this.records.keys()) {

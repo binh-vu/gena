@@ -6,7 +6,7 @@ import { observer } from "mobx-react";
 export const HomePage = observer(() => {
   const { todolistStore } = useStores();
   useEffect(() => {
-    todolistStore.fetchSome({ limit: 1000, offset: 0 });
+    todolistStore.fetch({ limit: 1000, offset: 0 });
   }, []);
 
   const items = todolistStore.list.map((item) => {

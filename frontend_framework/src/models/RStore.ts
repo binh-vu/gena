@@ -65,7 +65,8 @@ export abstract class RStore<
   M extends DBRecord<ID>
 > {
   public state: StoreState = new StoreState();
-  public records: Map<ID, M> = new Map();
+  // null represent that entity does not exist on the server
+  public records: Map<ID, M | null> = new Map();
   public ajaxErrorHandler: (error: AxiosError<any>) => void = (
     error: AxiosError<any>
   ) => {
@@ -81,16 +82,20 @@ export abstract class RStore<
   public nameAndField: [string, keyof M][];
 
   protected remoteURL: string;
+  // whether to reload the entity if the store already has an entity
+  protected refetch: boolean = true;
 
   /**
    * Constructor
    *
    * @param remoteURL RESTful endpoint for this store
    * @param field2name mapping from Record's field to the corresponding field name in the RESTful API
+   * @param refetch whether to refetch the entity if it is already in the store
    */
   constructor(
     remoteURL: string,
-    field2name?: Partial<Record<keyof M, string>>
+    field2name?: Partial<Record<keyof M, string>>,
+    refetch?: boolean
   ) {
     this.remoteURL = remoteURL;
     this.field2name = field2name || {};
@@ -98,27 +103,19 @@ export abstract class RStore<
       ([key, value]) => [value, key] as [string, keyof M]
     );
     this.name2field = Object.fromEntries(this.nameAndField);
+    if (refetch !== undefined) {
+      this.refetch = refetch;
+    }
 
     makeObservable(this, {
       state: observable,
       records: observable,
       fetch: action,
       fetchOne: action,
-      fetchSome: action,
+      fetchById: action,
       set: action,
       list: computed,
     });
-  }
-
-  /**
-   * Get a record from the store. If the record doesn't exist, try to fetch it
-   * from the server in background.
-   */
-  public fetchIfMissing(id: ID): M | undefined {
-    if (!this.records.has(id)) {
-      this.fetch(id);
-    }
-    return this.records.get(id);
   }
 
   /**
@@ -129,40 +126,27 @@ export abstract class RStore<
   }
 
   /**
-   * Fetch a record from remote server.
-   *
-   * Use async instead of flow as we may want to override the function and call super.
+   * Fetch mutliple records from remote server
    */
-  async fetch(id: ID): Promise<M | undefined> {
-    try {
-      this.state.value = "updating";
+  public fetch: (query: Query<M>) => CancellablePromise<FetchResult<M>> = flow(
+    function* (this: RStore<ID, M>, query: Query<M>) {
+      try {
+        this.state.value = "updating";
+        const result = yield this.query(query);
 
-      let resp = await axios.get(`${this.remoteURL}/${id}`);
+        for (const record of result.records) {
+          this.records.set(record.id, record);
+          this.index(record);
+        }
 
-      return runInAction(() => {
-        let record = this.deserialize(resp.data);
-        this.records.set(record.id, record);
-        this.index(record);
         this.state.value = "updated";
-
-        return record;
-      });
-    } catch (error: any) {
-      if (error.response && error.response.status === 404) {
-        // entity does not exist
-        runInAction(() => {
-          this.state.value = "updated";
-        });
-        return undefined;
-      }
-
-      runInAction(() => {
+        return result;
+      } catch (error: any) {
         this.state.value = "error";
-      });
-      this.ajaxErrorHandler(error);
-      throw error;
+        throw error;
+      }
     }
-  }
+  );
 
   /** Fetch one record from the remote server */
   async fetchOne(query: Query<M>): Promise<M | undefined> {
@@ -205,26 +189,49 @@ export abstract class RStore<
   }
 
   /**
-   * Fetch mutliple records from remote server
+   * Fetch a record from remote server.
+   *
+   * Use async instead of flow as we may want to override the function and call super.
+   *
+   * @returns the record if it exists, undefined otherwise
    */
-  public fetchSome: (query: Query<M>) => CancellablePromise<FetchResult<M>> =
-    flow(function* (this: RStore<ID, M>, query: Query<M>) {
-      try {
-        this.state.value = "updating";
-        const result = yield this.query(query);
+  async fetchById(id: ID): Promise<M | undefined> {
+    if (!this.refetch && this.has(id)) {
+      const record = this.records.get(id);
+      if (record === null) return Promise.resolve(undefined);
+      return Promise.resolve(record);
+    }
 
-        for (const record of result.records) {
-          this.records.set(record.id, record);
-          this.index(record);
-        }
+    try {
+      this.state.value = "updating";
 
+      let resp = await axios.get(`${this.remoteURL}/${id}`);
+
+      return runInAction(() => {
+        let record = this.deserialize(resp.data);
+        this.records.set(record.id, record);
+        this.index(record);
         this.state.value = "updated";
-        return result;
-      } catch (error: any) {
-        this.state.value = "error";
-        throw error;
+
+        return record;
+      });
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        // entity does not exist
+        runInAction(() => {
+          this.records.set(id, null);
+          this.state.value = "updated";
+        });
+        return undefined;
       }
-    });
+
+      runInAction(() => {
+        this.state.value = "error";
+      });
+      this.ajaxErrorHandler(error);
+      throw error;
+    }
+  }
 
   /** Query records (not store the result) */
   async query(query: Query<M>): Promise<FetchResult<M>> {
@@ -318,7 +325,7 @@ export abstract class RStore<
   /**
    * Get a local copy of a record
    */
-  public get(id: ID): M | undefined {
+  public get(id: ID): M | null | undefined {
     return this.records.get(id);
   }
 
@@ -334,15 +341,19 @@ export abstract class RStore<
   /**
    * Iter through list of local copy of records in the store
    */
-  public iter(): IterableIterator<M> {
-    return this.records.values();
+  public *iter(): Iterable<M> {
+    for (const m of this.records.values()) {
+      if (m !== null) {
+        yield m;
+      }
+    }
   }
 
   /**
    * Get a list of local copy of records in the store
    */
   get list(): M[] {
-    return Array.from(this.records.values());
+    return Array.from(this.iter());
   }
 
   /**
@@ -350,8 +361,8 @@ export abstract class RStore<
    */
   public filter(fn: (r: M) => boolean): M[] {
     let output = [];
-    for (let r of this.records.values()) {
-      if (fn(r)) {
+    for (const r of this.records.values()) {
+      if (r !== null && fn(r)) {
         output.push(r);
       }
     }
