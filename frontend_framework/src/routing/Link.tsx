@@ -58,11 +58,25 @@ export const ExternalLink = ({
   href,
   openInNewPage = false,
   children,
+  onCtrlClick,
   ...restprops
 }: {
   href: string;
   openInNewPage?: boolean;
+  onCtrlClick?: () => void;
 } & Omit<React.HTMLProps<HTMLAnchorElement>, "href" | "target" | "rel">) => {
+  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if ((e.ctrlKey || e.metaKey) && onCtrlClick) {
+      // holding ctrl or cmd key, we trigger the action
+      e.preventDefault();
+      onCtrlClick();
+    }
+  };
+
+  if (onCtrlClick !== undefined) {
+    restprops.onClick = onClick;
+  }
+
   return (
     <a
       href={href}

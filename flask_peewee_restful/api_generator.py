@@ -3,7 +3,8 @@ import re
 from functools import partial
 from typing import Type, Callable, Any, List, Optional, Dict
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, json, request, jsonify
+from flask_peewee_restful.deserializer import generate_deserializer
 from peewee import Model as PeeweeModel, DoesNotExist, fn
 from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound
@@ -11,17 +12,37 @@ from werkzeug.exceptions import BadRequest, NotFound
 
 def generate_api(
     Model: Type[PeeweeModel],
+    deserializers: Dict[str, Callable[[Any], Any]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
     enable_truncate_table: bool = False,
 ):
+    """Generate API from the given Model
+
+    Args:
+        Model: peewee model of the table
+        deserializers: deserialize raw value, throw value error if value is invalid. you can provide deserializer for some field and the rest is going to be generated automatically
+        serialize:
+        batch_serialize:
+        enable_truncate_table: whether to enable API to truncate the whole table
+    """
+    table_name = Model._meta.table_name
+    default_limit = str(50)
     name2field = {name: field for name, field in Model._meta.fields.items()}
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by", "group_by"}
     field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
     norm_value = {name: field.db_value for name, field in Model._meta.fields.items()}
 
-    table_name = Model._meta.table_name
-    default_limit = str(50)
+    if deserializers is None:
+        deserializers = generate_deserializer(Model)
+    elif len(set(name2field.keys()).difference(deserializers.keys())) > 0:
+        # automatically filling missing deserializers
+        deserializers.update(**generate_deserializer(Model))
+
+    if len(set(name2field.keys()).difference(deserializers.keys())) > 0:
+        raise Exception(
+            f"Table {table_name} doesn't have deserializer for field: {set(name2field.keys()).difference(deserializers.keys())}"
+        )
 
     if serialize is None:
         if hasattr(Model, "to_dict"):
@@ -191,20 +212,108 @@ def generate_api(
             query = query.limit(limit).offset(offset)
 
         # perform the query
-        items = batch_serialize(query)
+        items = batch_serialize(list(query))
         if len(fields) > 0:
             items = [{k: item[k] for k in field_names} for item in items]
 
         return jsonify({"items": items, "total": total})
 
+    @bp.route(f"/{table_name}/find_by_ids", methods=["POST"])
+    def get_by_ids():
+        if "ids" not in request.json:
+            raise BadRequest("Bad request. Missing `ids`")
+
+        ids = request.json["ids"]
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+            fields = [name2field[name] for name in field_names]
+        else:
+            field_names = []
+            fields = []
+
+        records = list(Model.select(Model.id, *fields).where(Model.id.in_(ids)))
+        records = batch_serialize(records)
+
+        if len(field_names) > 0:
+            records = {
+                item["id"]: {k: item[k] for k in field_names if k in item}
+                for item in records
+            }
+
+        return jsonify({"items": records, "total": len(records)})
+
     @bp.route(f"/{table_name}/<id>", methods=["GET"])
     def get_one(id):
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+            fields = [name2field[name] for name in field_names]
+        else:
+            field_names = []
+            fields = []
+
+        records = list(Model.select(*fields).where(Model.id == id))
+        if len(records) == 0:
+            raise NotFound(f"Record {id} does not exist")
+
+        record = serialize(records[0])
+        if len(fields) > 0:
+            record = {k: record[k] for k in field_names}
+
+        return jsonify(record)
+
+    @bp.route(f"/{table_name}/<id>", methods=["HEAD"])
+    def has(id):
+        if not Model.select().where(Model.id == id).exists():
+            raise NotFound(f"Record {id} does not exist")
+        return jsonify()
+
+    @bp.route(f"/{table_name}", methods=["POST"])
+    def create():
+        posted_record = request.json
+        raw_record = {}
+
+        # TODO: verify the content before saving
+        for name, field in name2field.items():
+            if name in posted_record:
+                try:
+                    raw_record[name] = deserializers[name](posted_record[name])
+                except ValueError as e:
+                    raise ValueError(f"Field `{name}` {str(e)}")
+
+        record = Model(**raw_record)
+        record.save()
+
+        # TODO: correct return types according to RESTful specification https://restfulapi.net/http-methods/
+        return jsonify(serialize(record))
+
+    @bp.route(f"/{table_name}/<id>", methods=["PUT"])
+    def update(id):
         try:
             record = Model.get_by_id(id)
         except DoesNotExist as e:
             raise NotFound(f"Record {id} does not exist")
 
+        # TODO: verify the content before saving
+        for name, field in name2field.items():
+            if name in request.json:
+                try:
+                    value = deserializers[name](request.json[name])
+                except ValueError as e:
+                    raise ValueError(f"Field `{name}` {str(e)}")
+
+                setattr(record, name, value)
+        record.save()
+
         return jsonify(serialize(record))
+
+    @bp.route(f"/{table_name}/<id>", methods=["DELETE"])
+    def delete_by_id(id):
+        try:
+            Model.get_by_id(id).delete_instance()
+        except DoesNotExist as e:
+            raise NotFound(f"Record {id} does not exist")
+
+        return jsonify({"status": "success"})
 
     if enable_truncate_table:
 
@@ -216,7 +325,7 @@ def generate_api(
     return bp
 
 
-def generate_api_4dict(
+def generate_readonly_api_4dict(
     name: str,
     id2ent: Dict[str, Any],
     serialize: Optional[Callable[[Any], dict]] = None,
@@ -235,6 +344,11 @@ def generate_api_4dict(
         if "ids" not in request.json:
             raise BadRequest("Bad request. Missing `ids`")
 
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+        else:
+            field_names = []
+
         ids = []
         ents = []
         for id in request.json["ids"]:
@@ -242,14 +356,29 @@ def generate_api_4dict(
                 ents.append(id2ent[id])
                 ids.append(id)
 
-        return jsonify(
-            {"items": dict(zip(ids, batch_serialize(ents))), "total": len(ents)}
-        )
+        records = batch_serialize(ents)
+        if len(field_names) > 0:
+            records = [
+                {k: item[k] for k in field_names if k in item} for item in records
+            ]
+
+        return jsonify({"items": dict(zip(ids, records)), "total": len(ents)})
 
     @bp.route(f"/{name}/<id>", methods=["GET"])
     def find_by_id(id: str):
         if id not in id2ent:
             raise NotFound(f"Record {id} does not exist")
-        return jsonify(serialize(id2ent[id]))
+
+        record = serialize(id2ent[id])
+
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+        else:
+            field_names = []
+
+        if len(field_names) > 0:
+            record = {k: record[k] for k in field_names if k in record}
+
+        return jsonify(record)
 
     return bp

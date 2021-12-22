@@ -1,6 +1,6 @@
 {
   "name": "rma-baseapp",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "private": false,
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -32,6 +32,7 @@
   },
   "scripts": {
     "build": "yarn build:esm && yarn build:cjs",
+    "build:lib": "yarn build:esm && yarn build:cjs",
     "build:esm": "tsc --noEmit false",
     "build:cjs": "tsc --noEmit false --module commonjs --outDir lib/cjs",
     "start": "react-scripts start",

@@ -233,6 +233,66 @@ export abstract class RStore<
     }
   }
 
+  /**
+   * Fetch multiple records from remote server by their IDs.
+   *
+   * Use async instead of flow as we may want to override the function and call super.
+   *
+   * @returns an object containing record that we found (the one we didn't found is undefined)
+   */
+  async fetchByIds(ids: ID[]): Promise<Record<ID, M>> {
+    let sendoutIds = ids;
+    if (!this.refetch) {
+      // no refetch, then we need to filter the list of ids
+      sendoutIds = sendoutIds.filter((id) => !this.has(id));
+
+      if (sendoutIds.length === 0) {
+        const output = {} as Record<ID, M>;
+        for (const id of ids) {
+          const record = this.records.get(id);
+          if (record !== null && record !== undefined) {
+            output[id] = record;
+          }
+        }
+        return Promise.resolve(output);
+      }
+    }
+
+    try {
+      this.state.value = "updating";
+      let resp = await axios.post(`${this.remoteURL}/find_by_ids`, {
+        ids: sendoutIds,
+      });
+
+      return runInAction(() => {
+        for (const item of Object.values(resp.data.items)) {
+          const record = this.deserialize(item);
+          this.records.set(record.id, record);
+          this.index(record);
+        }
+
+        const output = {} as Record<ID, M>;
+        for (const id of ids) {
+          const record = this.records.get(id);
+          if (record === undefined) {
+            this.records.set(id, null);
+          } else if (record !== null) {
+            output[id] = record;
+          }
+        }
+
+        this.state.value = "updated";
+        return output;
+      });
+    } catch (error: any) {
+      runInAction(() => {
+        this.state.value = "error";
+      });
+      this.ajaxErrorHandler(error);
+      throw error;
+    }
+  }
+
   /** Query records (not store the result) */
   async query(query: Query<M>): Promise<FetchResult<M>> {
     let params: any = {
@@ -316,7 +376,7 @@ export abstract class RStore<
   };
 
   /**
-   * Test if we store a local copy of a record
+   * Test if we store a local copy of a record (INCLUDING NULL -- the record does not exist)
    */
   public has(id: ID): boolean {
     return this.records.has(id);

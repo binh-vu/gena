@@ -93,7 +93,11 @@ export abstract class CRUDStore<
   /**
    * Update the record, with sync with remote server
    */
-  public update = flow(function* (this: CRUDStore<ID, C, U, M>, draft: U) {
+  public update = flow(function* (
+    this: CRUDStore<ID, C, U, M>,
+    draft: U,
+    discardDraft: boolean = true
+  ) {
     try {
       this.state.value = "updating";
 
@@ -105,6 +109,11 @@ export abstract class CRUDStore<
       draft.markSaved();
       this.records.set(record.id, record);
       this.index(record);
+
+      if (discardDraft) {
+        this.updateDrafts.delete(draft.id);
+      }
+
       this.state.value = "updated";
       return record;
     } catch (error: any) {

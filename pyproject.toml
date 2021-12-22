@@ -9,6 +9,9 @@ license = "MIT"
 python = "^3.8"
 peewee = "^3.14.4"
 Flask = "^2.0.2"
+requests = "^2.26.0"
+loguru = "^0.5.3"
+typing_extensions = ">=3.10"
 
 [tool.poetry.dev-dependencies]
 
