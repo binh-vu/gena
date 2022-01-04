@@ -10,6 +10,7 @@ import {
 import { CancellablePromise } from "mobx/dist/api/flow";
 import { Record as DBRecord } from "./Record";
 import { message } from "antd";
+import { Index } from "./StoreIndex";
 
 export class StoreState {
   public _value: "updating" | "updated" | "error" = "updated";
@@ -84,6 +85,7 @@ export abstract class RStore<
   protected remoteURL: string;
   // whether to reload the entity if the store already has an entity
   protected refetch: boolean = true;
+  protected indices: Index<ID, M>[] = [];
 
   /**
    * Constructor
@@ -95,7 +97,8 @@ export abstract class RStore<
   constructor(
     remoteURL: string,
     field2name?: Partial<Record<keyof M, string>>,
-    refetch?: boolean
+    refetch?: boolean,
+    indices?: Index<ID, M>[]
   ) {
     this.remoteURL = remoteURL;
     this.field2name = field2name || {};
@@ -106,6 +109,7 @@ export abstract class RStore<
     if (refetch !== undefined) {
       this.refetch = refetch;
     }
+    this.indices = indices || [];
 
     makeObservable(this, {
       state: observable,
@@ -449,7 +453,7 @@ export abstract class RStore<
   /**
    * Deserialize the data sent from the server to a record
    */
-  public deserialize(record: any): M {
+  public deserialize = (record: any): M => {
     if (this.nameAndField.length > 0) {
       for (const [name, field] of this.nameAndField) {
         record[field] = record[name];
@@ -457,12 +461,16 @@ export abstract class RStore<
       }
     }
     return record;
-  }
+  };
 
   /**
    * Add a record to your indexes. Its implementation must be IDEMPOTENT
    */
-  protected index(record: M): void {}
+  protected index(record: M): void {
+    for (const index of this.indices) {
+      index.add(record);
+    }
+  }
 
   /** Encode a query condition so its can be shared through URL */
   public encodeWhereQuery(condition: QueryConditions<M>) {

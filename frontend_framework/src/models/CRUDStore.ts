@@ -7,6 +7,7 @@ import {
   Record as DBRecord,
 } from "./Record";
 import { RStore } from "./RStore";
+import { Index } from "./StoreIndex";
 
 /**
  * A CRUD store use Map to store records
@@ -21,7 +22,7 @@ export abstract class CRUDStore<
   public updateDrafts: Map<ID, U> = new Map();
 
   protected createAJAXParams = { URL: undefined as any, config: {} };
-  protected onDeleteListeners: ((id: ID) => void)[] = [];
+  protected onDeleteListeners: ((record: M) => void)[] = [];
 
   /**
    * Constructor
@@ -33,9 +34,10 @@ export abstract class CRUDStore<
   constructor(
     remoteURL: string,
     field2name?: Partial<Record<keyof M, string>>,
-    refetch?: boolean
+    refetch?: boolean,
+    indices?: Index<ID, M>[]
   ) {
-    super(remoteURL, field2name, refetch);
+    super(remoteURL, field2name, refetch, indices);
 
     makeObservable(this, {
       createDrafts: observable,
@@ -51,7 +53,13 @@ export abstract class CRUDStore<
     });
   }
 
-  public addOnDeleteListener(listener: (id: ID) => void) {
+  /**
+   * Add listeners when a record is deleted. Note that the event is only fired
+   * if the record is not null (actually exist).
+   *
+   * @param listener
+   */
+  public addOnDeleteListener(listener: (record: M) => void) {
     this.onDeleteListeners.push(listener);
   }
 
@@ -101,7 +109,7 @@ export abstract class CRUDStore<
     try {
       this.state.value = "updating";
 
-      let resp = yield axios.post(
+      let resp = yield axios.put(
         `${this.remoteURL}/${draft.id}`,
         this.serializeUpdateDraft(draft)
       );
@@ -110,7 +118,7 @@ export abstract class CRUDStore<
       this.records.set(record.id, record);
       this.index(record);
 
-      if (discardDraft) {
+      if (discardDraft && this.updateDrafts.has(draft.id)) {
         this.updateDrafts.delete(draft.id);
       }
 
@@ -127,14 +135,21 @@ export abstract class CRUDStore<
    * Remove a record, will sync with remote server
    */
   public delete = flow(function* (this: CRUDStore<ID, C, U, M>, id: ID) {
+    const record = this.records.get(id);
+    if (record === undefined) return;
+
     try {
       this.state.value = "updating";
-
-      yield axios.delete(`${this.remoteURL}/${id}`);
-      this.deindex(id);
       this.records.delete(id);
-      for (let listener of this.onDeleteListeners) {
-        listener(id);
+
+      if (record !== null) {
+        this.deindex(record);
+        for (let listener of this.onDeleteListeners) {
+          listener(record);
+        }
+        // important to do async after all updates otherwise, reaction is going to throw
+        // while store is updating
+        yield axios.delete(`${this.remoteURL}/${id}`);
       }
 
       this.state.value = "updated";
@@ -154,10 +169,12 @@ export abstract class CRUDStore<
       await axios.delete(`${this.remoteURL}`);
 
       runInAction(() => {
-        for (let id of this.records.keys()) {
-          this.deindex(id);
-          for (let listener of this.onDeleteListeners) {
-            listener(id);
+        for (const record of this.records.values()) {
+          if (record !== null) {
+            this.deindex(record);
+            for (let listener of this.onDeleteListeners) {
+              listener(record);
+            }
           }
         }
 
@@ -203,7 +220,11 @@ export abstract class CRUDStore<
   /**
    * Remove a record (by id) from your indexes
    */
-  protected deindex(id: ID): void {}
+  protected deindex(record: M): void {
+    for (const index of this.indices) {
+      index.remove(record);
+    }
+  }
 
   /**
    * Serialize the update to send to the server

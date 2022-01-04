@@ -1,39 +1,79 @@
 import { action, makeObservable, observable } from "mobx";
+import { Record } from "./Record";
+
+export interface Index<ID extends string | number, M extends Record<ID>> {
+  // add record to the index
+  add(record: M): void;
+
+  // remove record from the index
+  remove(record: M): void;
+}
+
+export class SingleKeyUniqueIndex<
+  ID extends string | number,
+  F extends string | number,
+  M extends Record<ID>
+> implements Index<ID, M>
+{
+  public index: Map<F, ID> = new Map();
+
+  protected fkField: keyof M;
+
+  constructor(field: keyof M) {
+    this.fkField = field;
+    makeObservable(this, {
+      index: observable,
+      add: action,
+      remove: action,
+    });
+  }
+
+  public add(record: M) {
+    const key = record[this.fkField] as unknown as F;
+    this.index.set(key, record.id);
+  }
+
+  public remove(record: M) {
+    const key = record[this.fkField] as unknown as F;
+    this.index.delete(key);
+  }
+}
 
 /**
  * An index (fk1) => rid[]
  */
 export class SingleKeyIndex<
   ID extends string | number,
-  F extends string | number
-> {
+  F extends string | number,
+  M extends Record<ID>
+> implements Index<ID, M>
+{
   public index: Map<F, Set<ID>> = new Map();
 
-  protected fkField: string;
-  protected idField: string;
+  protected fkField: keyof M;
 
-  constructor(field: string, idField?: string) {
+  constructor(field: keyof M) {
     this.fkField = field;
-    this.idField = idField || "id";
     makeObservable(this, {
       index: observable,
       add: action,
+      remove: action,
     });
   }
 
-  public add(record: any) {
-    const key = record[this.fkField];
+  public add(record: M) {
+    const key = record[this.fkField] as unknown as F;
 
     if (!this.index.has(key)) {
       this.index.set(key, new Set());
     }
 
-    this.index.get(key)!.add(record[this.idField]);
+    this.index.get(key)!.add(record.id);
   }
 
-  public remove(record: any) {
-    const key = record[this.fkField];
-    this.index.get(key)?.delete(record[this.idField]);
+  public remove(record: M) {
+    const key = record[this.fkField] as unknown as F;
+    this.index.get(key)?.delete(record.id);
   }
 }
 
@@ -43,31 +83,32 @@ export class SingleKeyIndex<
 export class PairKeysIndex<
   ID extends string | number,
   F1 extends string | number,
-  F2 extends string | number
-> {
+  F2 extends string | number,
+  M extends Record<ID>
+> implements Index<ID, M>
+{
   public index: Map<F1, Map<F2, Set<ID>>> = new Map();
 
-  protected fkField1: string;
-  protected fkField2: string;
-  protected idField: string;
+  protected fkField1: keyof M;
+  protected fkField2: keyof M;
 
-  constructor(fkField1: string, fkField2: string, idField?: string) {
+  constructor(fkField1: keyof M, fkField2: keyof M) {
     this.fkField1 = fkField1;
     this.fkField2 = fkField2;
-    this.idField = idField || "id";
 
     makeObservable(this, {
       index: observable,
       add: action,
+      remove: action,
     });
   }
 
   /**
    * Index record
    */
-  public add(record: any) {
-    const key1 = record[this.fkField1];
-    const key2 = record[this.fkField2];
+  public add(record: M) {
+    const key1 = record[this.fkField1] as unknown as F1;
+    const key2 = record[this.fkField2] as unknown as F2;
 
     if (!this.index.has(key1)) {
       this.index.set(key1, new Map());
@@ -77,15 +118,15 @@ export class PairKeysIndex<
     if (!map.has(key2)) {
       map.set(key2, new Set());
     }
-    map.get(key2)!.add(record[this.idField]);
+    map.get(key2)!.add(record.id);
   }
 
-  public remove(record: any) {
-    const key1 = record[this.fkField1];
-    const key2 = record[this.fkField2];
+  public remove(record: M) {
+    const key1 = record[this.fkField1] as unknown as F1;
+    const key2 = record[this.fkField2] as unknown as F2;
 
     if (this.index.has(key1)) {
-      this.index.get(key1)!.get(key2)?.delete(record[this.idField]);
+      this.index.get(key1)!.get(key2)?.delete(record.id);
     }
   }
 }
@@ -96,43 +137,44 @@ export class PairKeysIndex<
 export class PairKeysUniqueIndex<
   ID extends string | number,
   F1 extends string | number,
-  F2 extends string | number
-> {
+  F2 extends string | number,
+  M extends Record<ID>
+> implements Index<ID, M>
+{
   public index: Map<F1, Map<F2, ID>> = new Map();
 
-  protected fkField1: string;
-  protected fkField2: string;
-  protected idField: string;
+  protected fkField1: keyof M;
+  protected fkField2: keyof M;
 
-  constructor(fkField1: string, fkField2: string, idField?: string) {
+  constructor(fkField1: keyof M, fkField2: keyof M) {
     this.fkField1 = fkField1;
     this.fkField2 = fkField2;
-    this.idField = idField || "id";
 
     makeObservable(this, {
       index: observable,
       add: action,
+      remove: action,
     });
   }
 
   /**
    * Index record
    */
-  public add(record: any) {
-    const key1 = record[this.fkField1];
-    const key2 = record[this.fkField2];
+  public add(record: M) {
+    const key1 = record[this.fkField1] as unknown as F1;
+    const key2 = record[this.fkField2] as unknown as F2;
 
     if (!this.index.has(key1)) {
       this.index.set(key1, new Map());
     }
 
     let map = this.index.get(key1)!;
-    map.set(key2, record[this.idField]);
+    map.set(key2, record.id);
   }
 
-  public remove(record: any) {
-    const key1 = record[this.fkField1];
-    const key2 = record[this.fkField2];
+  public remove(record: M) {
+    const key1 = record[this.fkField1] as unknown as F1;
+    const key2 = record[this.fkField2] as unknown as F2;
 
     if (this.index.has(key1)) {
       this.index.get(key1)!.delete(key2);
@@ -147,39 +189,40 @@ export class TripleKeysIndex<
   ID extends string | number,
   F1 extends string | number,
   F2 extends string | number,
-  F3 extends string | number
-> {
+  F3 extends string | number,
+  M extends Record<ID>
+> implements Index<ID, M>
+{
   public index: Map<F1, Map<F2, Map<F3, Set<ID>>>> = new Map();
 
-  protected fkField1: string;
-  protected fkField2: string;
-  protected fkField3: string;
-  protected idField: string;
+  protected fkField1: keyof M;
+  protected fkField2: keyof M;
+  protected fkField3: keyof M;
 
   constructor(
-    fkField1: string,
-    fkField2: string,
-    fkField3: string,
-    idField?: string
+    fkField1: keyof M,
+    fkField2: keyof M,
+    fkField3: keyof M,
+    idField?: keyof M
   ) {
     this.fkField1 = fkField1;
     this.fkField2 = fkField2;
     this.fkField3 = fkField3;
-    this.idField = idField || "id";
 
     makeObservable(this, {
       index: observable,
       add: action,
+      remove: action,
     });
   }
 
   /**
    * Index record
    */
-  public add(record: any) {
-    const key1 = record[this.fkField1];
-    const key2 = record[this.fkField2];
-    const key3 = record[this.fkField3];
+  public add(record: M) {
+    const key1 = record[this.fkField1] as unknown as F1;
+    const key2 = record[this.fkField2] as unknown as F2;
+    const key3 = record[this.fkField3] as unknown as F3;
 
     if (!this.index.has(key1)) {
       this.index.set(key1, new Map());
@@ -195,16 +238,16 @@ export class TripleKeysIndex<
       map3.set(key3, new Set());
     }
 
-    map3.get(key3)!.add(record[this.idField]);
+    map3.get(key3)!.add(record.id);
   }
 
-  public remove(record: any) {
-    const map2 = this.index.get(record[this.fkField1]);
+  public remove(record: M) {
+    const map2 = this.index.get(record[this.fkField1] as unknown as F1);
     if (map2 === undefined) return;
 
-    const map3 = map2.get(record[this.fkField2]);
+    const map3 = map2.get(record[this.fkField2] as unknown as F2);
     if (map3 === undefined) return;
 
-    map3.get(record[this.fkField3])?.delete(record[this.idField]);
+    map3.get(record[this.fkField3] as unknown as F3)?.delete(record.id);
   }
 }
