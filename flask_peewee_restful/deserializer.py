@@ -112,13 +112,13 @@ def deserialize_int(value):
         if value == int(value):
             return int(value)
 
-    raise ValueError(f"expect integer but get: {value}")
+    raise ValueError(f"expect integer but get: {type(value)}")
 
 
 def deserialize_str(value):
     if isinstance(value, str):
         return value
-    raise ValueError(f"expect string but get: {value}")
+    raise ValueError(f"expect string but get: {type(value)}")
 
 
 def deserialize_float(value):
@@ -128,25 +128,25 @@ def deserialize_float(value):
     if isinstance(value, str):
         return float(value)
 
-    raise ValueError(f"expect float but get: {value}")
+    raise ValueError(f"expect float but get: {type(value)}")
 
 
 def deserialize_number_or_string(value):
     if not isinstance(value, (int, str, float)):
-        raise ValueError(f"expect either string or number but get {value}")
+        raise ValueError(f"expect either string or number but get {type(value)}")
     return value
 
 
 def deserialize_none(value):
     if value is not None:
-        raise ValueError(f"expect none but get {value}")
+        raise ValueError(f"expect none but get {type(value)}")
     return value
 
 
 def get_deserialize_list(deserialize_item: Deserializer):
     def deserialize_list(value):
         if not isinstance(value, list):
-            raise ValueError("expect list but get {value}")
+            raise ValueError(f"expect list but get {type(value)}")
         return [deserialize_item(item) for item in value]
 
     return deserialize_list
@@ -155,7 +155,7 @@ def get_deserialize_list(deserialize_item: Deserializer):
 def get_deserialize_set(deserialize_item: Deserializer):
     def deserialize_set(value):
         if not isinstance(value, set):
-            raise ValueError("expect set but get {value}")
+            raise ValueError(f"expect set but get {type(value)}")
         return {deserialize_item(item) for item in value}
 
     return deserialize_set
@@ -164,7 +164,7 @@ def get_deserialize_set(deserialize_item: Deserializer):
 def get_deserialize_dict(deserialize_item: Deserializer):
     def deserialize_dict(value):
         if not isinstance(value, dict):
-            raise ValueError("expect dict but get {value}")
+            raise ValueError(f"expect dict but get {type(value)}")
         return {k: deserialize_item(item) for k, item in value.items()}
 
     return deserialize_dict
@@ -321,5 +321,5 @@ def get_dataclass_deserializer(
 def deserialize_dict(value):
     """Deserialize a dictionary. Avoid using it because it does not deep check as other functions"""
     if not isinstance(value, dict):
-        raise ValueError("expect dictionary but get {value}")
+        raise ValueError(f"expect dictionary but get {type(value)}")
     return value

@@ -1,7 +1,7 @@
 from collections import defaultdict
 import re
 from functools import partial
-from typing import Type, Callable, Any, List, Optional, Dict
+from typing import Mapping, Type, Callable, Any, List, Optional, Dict
 
 from flask import Blueprint, json, request, jsonify
 from flask_peewee_restful.deserializer import generate_deserializer
@@ -272,7 +272,6 @@ def generate_api(
         posted_record = request.json
         raw_record = {}
 
-        # TODO: verify the content before saving
         for name, field in name2field.items():
             if name in posted_record:
                 try:
@@ -293,7 +292,6 @@ def generate_api(
         except DoesNotExist as e:
             raise NotFound(f"Record {id} does not exist")
 
-        # TODO: verify the content before saving
         for name, field in name2field.items():
             if name in request.json:
                 try:
@@ -327,21 +325,66 @@ def generate_api(
 
 def generate_readonly_api_4dict(
     name: str,
-    id2ent: Dict[str, Any],
+    id2ent: Mapping[str, Any],
+    unique_field_funcs: Dict[str, Callable[[str], str]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
 ):
+    """Generate API for a dictionary.
+
+    Make it as similar to the API of DB as possible. However, due to its limitation, we
+    only support accessing by unique key (via id or other unique field)
+
+    Args:
+        name: name of the endpoint
+        id2ent: dictionary of entities
+        unique_field_funcs: unique field and function to transform it to id
+        serialize: function to serialize an entity
+        batch_serialize: function to serialize a list of entities
+    """
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by"}
-    field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
     if batch_serialize is None:
         assert serialize is not None
-        batch_serialize = lambda lst: [serialize(item) for item in lst]
+        batch_serialize = gen_batch_serialize(serialize)
+    elif serialize is None:
+        serialize = lambda x: batch_serialize([x])[0]
 
+    if unique_field_funcs is None:
+        unique_field_funcs = {}
     bp = Blueprint(name, name)
+
+    @bp.route(f"/{name}", methods=["GET"])
+    def get():
+        """Retrieving records matched a query."""
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+        else:
+            field_names = []
+
+        lst = []
+        for name in request.args.keys():
+            if name in op_fields:
+                continue
+            if name not in unique_field_funcs:
+                raise BadRequest(f"Invalid field name: {name}")
+            lst.append(name)
+
+        if len(lst) > 1:
+            raise BadRequest(f"Invalid query. Only one field is allowed but get: {lst}")
+
+        if len(lst) == 0:
+            raise BadRequest(f"Invalid query. Must provide at least one field")
+
+        id = unique_field_funcs[lst[0]](request.args[lst[0]])
+        record = serialize(id2ent[id])
+        if len(field_names) > 0:
+            record = {k: record[k] for k in field_names if k in record}
+
+        return jsonify({"items": [record], "total": 1})
 
     @bp.route(f"/{name}/find_by_ids", methods=["POST"])
     def find_by_ids():
-        if "ids" not in request.json:
+        if "ids" not in request.json:  # type: ignore
             raise BadRequest("Bad request. Missing `ids`")
 
         if "fields" in request.args:
@@ -382,3 +425,12 @@ def generate_readonly_api_4dict(
         return jsonify(record)
 
     return bp
+
+
+def gen_batch_serialize(
+    serialize: Callable[[Any], dict]
+) -> Callable[[List[Any]], List[dict]]:
+    def batch_serialize(lst):
+        return [serialize(item) for item in lst]
+
+    return batch_serialize
