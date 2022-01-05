@@ -85,7 +85,7 @@ export abstract class RStore<
   protected remoteURL: string;
   // whether to reload the entity if the store already has an entity
   protected refetch: boolean = true;
-  protected indices: Index<ID, M>[] = [];
+  protected indices: Index<M>[] = [];
 
   /**
    * Constructor
@@ -98,7 +98,7 @@ export abstract class RStore<
     remoteURL: string,
     field2name?: Partial<Record<keyof M, string>>,
     refetch?: boolean,
-    indices?: Index<ID, M>[]
+    indices?: Index<M>[]
   ) {
     this.remoteURL = remoteURL;
     this.field2name = field2name || {};

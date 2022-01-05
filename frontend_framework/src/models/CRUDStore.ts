@@ -35,7 +35,7 @@ export abstract class CRUDStore<
     remoteURL: string,
     field2name?: Partial<Record<keyof M, string>>,
     refetch?: boolean,
-    indices?: Index<ID, M>[]
+    indices?: Index<M>[]
   ) {
     super(remoteURL, field2name, refetch, indices);
 

@@ -2,7 +2,7 @@ export interface JunctionRecord<
   JID extends string | number,
   AID extends string | number,
   BID extends string | number
-  > {
+> {
   id: JID;
   aid: AID;
   bid: BID;
@@ -19,7 +19,7 @@ export interface DraftCreateRecord {
 export interface DraftUpdateRecord<
   ID extends string | number,
   M extends Record<ID>
-  > {
+> {
   id: ID;
 
   /**
@@ -40,7 +40,7 @@ export interface DraftUpdateJunctionRecord<
   AID extends string | number,
   BID extends string | number,
   M extends JunctionRecord<JID, AID, BID>
-  > {
+> {
   id: JID;
 
   /**
