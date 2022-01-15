@@ -63,10 +63,11 @@ def generate_api(
     @bp.route(f"/{table_name}", methods=["GET"])
     def get():
         """Retrieving records matched a query.
-        Condition on a field such as >, >=, <, <= can be specified using brackets such as: <field>[gt]=10.
+        Condition on a field such as >, >=, <, <=, `max`, `min`, `in` can be specified using brackets such as: <field>[gt]=10.
         We also support complex conditions:
             1. `max`: keep the record in a group that has the largest value
             2. `min`: keep the record in a group that has the smallest value
+            3. `in`: select record that its values are in the given list
 
         We can support another aggregation to select keep all values in a group. However, since each value is for each record, we also have multiple ids. Therefore, a natural choice is to use `group_by` operator instead. Note that when you use group_by, the output is still a table (not a mapping) so that the client can reuse the code that read the data, but they have to group the result themselves.
 
@@ -136,6 +137,12 @@ def generate_api(
                 if op in {"max"}:
                     assert op not in pending_ops[name]
                     pending_ops[name][op] = value
+                    continue
+                elif op == "in":
+                    norm = norm_value[name]
+                    conditions[field].append(
+                        (field.in_([norm(x) for x in value.split(",")]))
+                    )
                     continue
 
                 # no special operator

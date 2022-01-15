@@ -42,7 +42,10 @@ export type QueryConditions<R> = Partial<
     | number
     | boolean
     | { op: "max"; value: (keyof R)[] }
-    | { op: "gt" | "lt" | "gte" | "lte"; value: string | number }
+    | {
+        op: "gt" | "lt" | "gte" | "lte" | "in";
+        value: string | number | string[] | number[];
+      }
   >
 >;
 
@@ -317,7 +320,9 @@ export abstract class RStore<
           if (op_or_val.op === "max") {
             params[`${field}[${op_or_val.op}]`] = op_or_val.value.join(",");
           } else {
-            params[`${field}[${op_or_val.op}]`] = op_or_val.value;
+            params[`${field}[${op_or_val.op}]`] = Array.isArray(op_or_val.value)
+              ? op_or_val.value.join(",")
+              : op_or_val.value;
           }
         } else {
           params[`${field}`] = op_or_val;
