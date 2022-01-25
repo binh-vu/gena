@@ -11,7 +11,7 @@ peewee = "^3.14.4"
 Flask = "^2.0.2"
 requests = "^2.26.0"
 loguru = "^0.5.3"
-typing_extensions = ">=3.10"
+typing_extensions = "^4.0.0"
 
 [tool.poetry.dev-dependencies]
 
