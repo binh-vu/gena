@@ -15,9 +15,11 @@ class TodoList(Model):
     todo = TextField()
 
 
-if not os.path.exists(os.environ['DBFILE']):
+if not os.path.exists(os.environ["DBFILE"]):
     db.create_tables([TodoList], safe=True)
-    TodoList.insert_many([
-        {"checked": False, "todo": "go grocery"},
-        {"checked": False, "todo": "do laundry"},
-    ]).execute()
+    TodoList.insert_many(
+        [
+            {"checked": False, "todo": "go grocery"},
+            {"checked": False, "todo": "do laundry"},
+        ]
+    ).execute()

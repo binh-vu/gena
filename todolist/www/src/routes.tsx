@@ -22,5 +22,9 @@ export const Layout = (
  * Definitions for routes in this application:
  */
 export const routes = {
-  home: new NoArgsPathDef(Layout(HomePage), "/", true),
+  home: new NoArgsPathDef({
+    component: Layout(HomePage),
+    pathDef: "/",
+    exact: true,
+  }),
 };

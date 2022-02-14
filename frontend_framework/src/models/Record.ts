@@ -55,3 +55,45 @@ export interface DraftUpdateJunctionRecord<
    */
   toModel(): M | undefined;
 }
+
+/**
+ * A simple implementation of DraftCreateRecord.
+ */
+export class SimpleDraftCreateRecord<
+  ID extends string | number,
+  M extends Record<ID>
+> implements DraftCreateRecord
+{
+  public draftID: string;
+  public record: M;
+
+  constructor(draftID: string, record: M) {
+    this.draftID = draftID;
+    this.record = record;
+  }
+}
+
+/**
+ * Simple implementation of DraftUpdateRecord, it has no ability to tell if a record has been modified or not
+ */
+export class SimpleDraftUpdateRecord<
+  ID extends string | number,
+  M extends Record<ID>
+> implements DraftUpdateRecord<ID, M>
+{
+  public record: M;
+
+  constructor(record: M) {
+    this.record = record;
+  }
+
+  get id() {
+    return this.record.id;
+  }
+
+  markSaved(): void {}
+
+  toModel(): M | undefined {
+    return this.record;
+  }
+}

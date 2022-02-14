@@ -456,7 +456,7 @@ export abstract class RStore<
   }
 
   /**
-   * Deserialize the data sent from the server to a record
+   * Deserialize the data sent from the server to a record.
    */
   public deserialize = (record: any): M => {
     if (this.nameAndField.length > 0) {

@@ -26,6 +26,7 @@ from peewee import (
     FloatField,
     ForeignKeyField,
     IntegerField,
+    BooleanField,
     _StringField,
     TextField,
     Value,
@@ -50,6 +51,8 @@ def generate_deserializer(
             func = deserialize_int
         elif isinstance(field, FloatField):
             func = deserialize_float
+        elif isinstance(field, BooleanField):
+            func = deserialize_bool
         elif isinstance(field, _StringField):
             if isinstance(field, CharField) or type(field) is TextField:
                 if (
@@ -113,6 +116,18 @@ def deserialize_int(value):
             return int(value)
 
     raise ValueError(f"expect integer but get: {type(value)}")
+
+
+def deserialize_bool(value):
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        if value != "true" or value != "false":
+            raise ValueError(f"expect bool string but get: {value}")
+        return value == "true"
+
+    raise ValueError(f"expect bool value but get: {type(value)}")
 
 
 def deserialize_str(value):

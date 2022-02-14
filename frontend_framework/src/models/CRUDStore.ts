@@ -4,6 +4,8 @@ import { CancellablePromise } from "mobx/dist/api/flow";
 import {
   DraftCreateRecord,
   DraftUpdateRecord,
+  SimpleDraftCreateRecord,
+  SimpleDraftUpdateRecord,
   Record as DBRecord,
 } from "./Record";
 import { RStore } from "./RStore";
@@ -235,4 +237,33 @@ export abstract class CRUDStore<
    * Serialize the create object to send to the server
    */
   public abstract serializeCreateDraft(record: C): object;
+}
+
+export class SimpleCRUDStore<
+  ID extends string | number,
+  M extends DBRecord<ID>
+> extends CRUDStore<
+  ID,
+  SimpleDraftCreateRecord<ID, M>,
+  SimpleDraftUpdateRecord<ID, M>,
+  M
+> {
+  public serializeUpdateDraft(record: SimpleDraftUpdateRecord<ID, M>): object {
+    return this.serializeRecord(record.record);
+  }
+  public serializeCreateDraft(record: SimpleDraftCreateRecord<ID, M>): object {
+    return this.serializeRecord(record.record);
+  }
+
+  protected serializeRecord(record: M): object {
+    const val: any = {};
+    for (const [k, v] of Object.entries(record)) {
+      if (this.field2name.hasOwnProperty(k)) {
+        val[this.field2name[k as unknown as keyof M]] = v;
+      } else {
+        val[k] = v;
+      }
+    }
+    return val;
+  }
 }

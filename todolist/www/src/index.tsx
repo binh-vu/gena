@@ -1,10 +1,9 @@
-import React from "react";
 import ReactDOM from "react-dom";
-import "./index.css";
 import { App } from "rma-baseapp";
+import "./index.css";
+import { StoreContext, stores } from "./models";
 import reportWebVitals from "./reportWebVitals";
 import { routes } from "./routes";
-import { stores, StoreContext } from "./models";
 
 ReactDOM.render(
   <StoreContext.Provider value={stores}>

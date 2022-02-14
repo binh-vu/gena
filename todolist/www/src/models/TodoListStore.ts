@@ -1,22 +1,23 @@
-import { RStore } from "rma-baseapp";
-import { makeObservable, action } from "mobx";
+import { action, makeObservable } from "mobx";
+import { Record, SimpleCRUDStore } from "rma-baseapp";
+import { SimpleDraftUpdateRecord } from "rma-baseapp/lib/esm/models/Record";
 
-export interface TodoList {
+export interface Todo extends Record<number> {
   id: number;
   checked: boolean;
   todo: string;
 }
 
-export class TodoListStore extends RStore<number, TodoList> {
+export class TodoListStore extends SimpleCRUDStore<number, Todo> {
   constructor() {
     super(`/api/todo_list`);
-
     makeObservable(this, {
       toggle: action,
     });
   }
 
-  toggle(item: TodoList) {
+  toggle(item: Todo) {
     item.checked = !item.checked;
+    this.update(new SimpleDraftUpdateRecord(item));
   }
 }

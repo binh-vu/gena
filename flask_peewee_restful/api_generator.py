@@ -1,4 +1,5 @@
 from collections import defaultdict
+from curses import raw
 import re
 from functools import partial
 from typing import Mapping, Type, Callable, Any, List, Optional, Dict
@@ -285,10 +286,10 @@ def generate_api(
                     raw_record[name] = deserializers[name](posted_record[name])
                 except ValueError as e:
                     raise ValueError(f"Field `{name}` {str(e)}")
-
-        record = Model(**raw_record)
-        record.save()
-
+        if "id" in raw_record:
+            # remove id as this API always creates a new record
+            raw_record.pop("id")
+        record = Model.create(**raw_record)
         # TODO: correct return types according to RESTful specification https://restfulapi.net/http-methods/
         return jsonify(serialize(record))
 
