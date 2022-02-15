@@ -123,7 +123,7 @@ def deserialize_bool(value):
         return value
 
     if isinstance(value, str):
-        if value != "true" or value != "false":
+        if value != "true" and value != "false":
             raise ValueError(f"expect bool string but get: {value}")
         return value == "true"
 

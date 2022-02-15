@@ -32,7 +32,6 @@ def generate_api(
     name2field = {name: field for name, field in Model._meta.fields.items()}
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by", "group_by"}
     field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
-    norm_value = {name: field.db_value for name, field in Model._meta.fields.items()}
 
     if deserializers is None:
         deserializers = generate_deserializer(Model)
@@ -140,14 +139,14 @@ def generate_api(
                     pending_ops[name][op] = value
                     continue
                 elif op == "in":
-                    norm = norm_value[name]
+                    deser = deserializers[name]
                     conditions[field].append(
-                        (field.in_([norm(x) for x in value.split(",")]))
+                        (field.in_([deser(x) for x in value.split(",")]))
                     )
                     continue
 
                 # no special operator
-                value = norm_value[name](value)
+                value = deserializers[name](value)
                 if op is None:
                     conditions[field].append((field == value))
                 elif op == "gt":

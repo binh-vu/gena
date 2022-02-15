@@ -7,7 +7,7 @@ from tornado.wsgi import WSGIContainer
 
 
 @click.command()
-@click.option("-d", "--dbfile", default="", help="smc database file")
+@click.option("-d", "--dbfile", default="", help="database file")
 @click.option("--wsgi", is_flag=True, help="Whether to use wsgi server")
 @click.option("-p", "--port", default=5000, help="Listening port")
 @click.option(
