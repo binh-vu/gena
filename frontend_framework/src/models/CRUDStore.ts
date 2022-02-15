@@ -1,5 +1,12 @@
 import axios from "axios";
-import { observable, flow, makeObservable, runInAction, action } from "mobx";
+import {
+  observable,
+  flow,
+  makeObservable,
+  runInAction,
+  action,
+  override,
+} from "mobx";
 import { CancellablePromise } from "mobx/dist/api/flow";
 import {
   DraftCreateRecord,
@@ -68,22 +75,18 @@ export abstract class CRUDStore<
   /**
    * Create the record, will sync with remote server.
    */
-  public create: (draft: C, discardDraft?: boolean) => CancellablePromise<M> =
-    flow(function* (
-      this: CRUDStore<ID, C, U, M>,
-      draft: C,
-      discardDraft: boolean = true
-    ) {
-      try {
-        this.state.value = "updating";
+  async create(draft: C, discardDraft: boolean = true): Promise<M> {
+    try {
+      this.state.value = "updating";
 
-        let resp = yield axios.post(
-          this.createAJAXParams.URL || this.remoteURL,
-          this.serializeCreateDraft(draft),
-          this.createAJAXParams.config
-        );
+      let resp = await axios.post(
+        this.createAJAXParams.URL || this.remoteURL,
+        this.serializeCreateDraft(draft),
+        this.createAJAXParams.config
+      );
+
+      return runInAction(() => {
         let record = this.deserialize(resp.data);
-
         this.records.set(record.id, record);
         this.index(record);
 
@@ -93,50 +96,60 @@ export abstract class CRUDStore<
 
         this.state.value = "updated";
         return record;
-      } catch (error: any) {
+      });
+    } catch (error: any) {
+      runInAction(() => {
         this.state.value = "error";
-        this.ajaxErrorHandler(error);
-        throw error;
-      }
-    });
+      });
+      this.ajaxErrorHandler(error);
+      throw error;
+    }
+  }
 
   /**
    * Update the record, with sync with remote server
    */
-  public update = flow(function* (
-    this: CRUDStore<ID, C, U, M>,
-    draft: U,
-    discardDraft: boolean = true
-  ) {
+  async update(draft: U, discardDraft: boolean = true): Promise<M> {
     try {
       this.state.value = "updating";
 
-      let resp = yield axios.put(
+      let resp = await axios.put(
         `${this.remoteURL}/${draft.id}`,
         this.serializeUpdateDraft(draft)
       );
-      let record = draft.toModel() || this.deserialize(resp.data);
-      draft.markSaved();
-      this.records.set(record.id, record);
-      this.index(record);
 
-      if (discardDraft && this.updateDrafts.has(draft.id)) {
-        this.updateDrafts.delete(draft.id);
-      }
+      return runInAction(() => {
+        let record = draft.toModel() || this.deserialize(resp.data);
+        draft.markSaved();
+        // deindex the record if it's in the store
+        const prevRecord = this.records.get(draft.id);
+        if (prevRecord !== undefined && prevRecord !== null) {
+          this.deindex(prevRecord);
+        }
 
-      this.state.value = "updated";
-      return record;
+        this.records.set(record.id, record);
+        this.index(record);
+
+        if (discardDraft && this.updateDrafts.has(draft.id)) {
+          this.updateDrafts.delete(draft.id);
+        }
+
+        this.state.value = "updated";
+        return record;
+      });
     } catch (error: any) {
-      this.state.value = "error";
+      runInAction(() => {
+        this.state.value = "error";
+      });
       this.ajaxErrorHandler(error);
       throw error;
     }
-  });
+  }
 
   /**
    * Remove a record, will sync with remote server
    */
-  public delete = flow(function* (this: CRUDStore<ID, C, U, M>, id: ID) {
+  async delete(id: ID) {
     const record = this.records.get(id);
     if (record === undefined) return;
 
@@ -151,16 +164,20 @@ export abstract class CRUDStore<
         }
         // important to do async after all updates otherwise, reaction is going to throw
         // while store is updating
-        yield axios.delete(`${this.remoteURL}/${id}`);
+        await axios.delete(`${this.remoteURL}/${id}`);
       }
 
-      this.state.value = "updated";
+      runInAction(() => {
+        this.state.value = "updated";
+      });
     } catch (error: any) {
-      this.state.value = "error";
+      runInAction(() => {
+        this.state.value = "error";
+      });
       this.ajaxErrorHandler(error);
       throw error;
     }
-  });
+  }
 
   /**
    * Remove all records, will sync with the remote server
@@ -244,18 +261,53 @@ export class SimpleCRUDStore<
   M extends DBRecord<ID>
 > extends CRUDStore<
   ID,
-  SimpleDraftCreateRecord<ID, M>,
-  SimpleDraftUpdateRecord<ID, M>,
+  Omit<M, "id"> & { draftID: string },
+  M & { markSaved(): void; toModel(): M | undefined },
   M
 > {
-  public serializeUpdateDraft(record: SimpleDraftUpdateRecord<ID, M>): object {
-    return this.serializeRecord(record.record);
-  }
-  public serializeCreateDraft(record: SimpleDraftCreateRecord<ID, M>): object {
-    return this.serializeRecord(record.record);
+  constructor(
+    remoteURL: string,
+    field2name?: Partial<Record<keyof M, string>>,
+    refetch?: boolean,
+    indices?: Index<M>[]
+  ) {
+    super(remoteURL, field2name, refetch, indices);
+
+    makeObservable(this, {
+      create: override,
+      update: override,
+    });
   }
 
-  protected serializeRecord(record: M): object {
+  async create(draft: Omit<M, "id">): Promise<M> {
+    return super.create(Object.assign({ draftID: "" }, draft), true);
+  }
+
+  async update(draft: M): Promise<M> {
+    return super.update(
+      Object.assign(
+        {
+          markSaved: () => {},
+          toModel: () => undefined,
+        },
+        draft
+      ),
+      true
+    );
+  }
+
+  public serializeUpdateDraft(
+    record: M & { markSaved(): void; toModel(): M | undefined }
+  ): object {
+    return this.serializeRecord(record);
+  }
+  public serializeCreateDraft(
+    record: Omit<M, "id"> & { draftID: string }
+  ): object {
+    return this.serializeRecord(record);
+  }
+
+  protected serializeRecord(record: M | Omit<M, "id">): object {
     const val: any = {};
     for (const [k, v] of Object.entries(record)) {
       if (this.field2name.hasOwnProperty(k)) {

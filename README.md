@@ -225,20 +225,54 @@ We are going to display the todo list as a list. So we use [List component](http
 ```typescript
 export const HomePage = observer(() => {
   const { todolistStore } = useStores();
-  const items = todolistStore.list.map((item) => <TodoItem item={item} />);
-  return <List bordered={true}>{items}</List>;
-});
+  useEffect(() => {
+    todolistStore.fetch({ limit: 1000, offset: 0 });
+  }, []);
 
-const TodoItem = observer(({ item }: { item: Todo }) => {
+  const items = todolistStore.list.map((item) => {
+    return (
+      <List.Item key={item.id}>
+        <Checkbox
+          checked={item.checked}
+          onChange={(e) => {
+            item.checked = e.target.checked;
+            todolistStore.update(item);
+          }}
+        >
+          <Typography.Paragraph
+            style={{ marginBottom: 0 }}
+            editable={{
+              onChange: (text) => {
+                item.todo = text;
+                todolistStore.update(item);
+              },
+            }}
+          >
+            {item.todo}
+          </Typography.Paragraph>
+        </Checkbox>
+        <Button
+          type="primary"
+          danger={true}
+          onClick={() => {
+            todolistStore.delete(item.id);
+          }}
+        >
+          Delete
+        </Button>
+      </List.Item>
+    );
+  });
+
+  const addItem = () => todolistStore.create({ checked: false, todo: "" });
+
   return (
-    <List.Item key={item.id}>
-      <Checkbox
-        checked={item.checked}
-        onChange={() => todolistStore.toggle(item)}
-      >
-        {item.todo}
-      </Checkbox>
-    </List.Item>
+    <Space direction="vertical" style={{ width: "100%" }}>
+      <List bordered={true}>{items}</List>
+      <Button type="primary" onClick={addItem}>
+        Add
+      </Button>
+    </Space>
   );
 });
 ```

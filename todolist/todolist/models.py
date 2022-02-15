@@ -19,7 +19,7 @@ if not os.path.exists(os.environ["DBFILE"]):
     db.create_tables([TodoList], safe=True)
     TodoList.insert_many(
         [
-            {"checked": False, "todo": "go grocery"},
-            {"checked": False, "todo": "do laundry"},
+            {"checked": False, "todo": "pay the bill"},
+            {"checked": False, "todo": "submit homework 1"},
         ]
     ).execute()

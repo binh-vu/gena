@@ -1,8 +1,11 @@
-import { NoArgsPathDef, NoQueryArgsPathDef } from "rma-baseapp";
-import { HomePage } from "./pages/HomePage";
-import React from "react";
-import { CenterNavBar } from "rma-baseapp";
 import { Space } from "antd";
+import React from "react";
+import { applyLayout, CenterNavBar, NoArgsPathDef } from "rma-baseapp";
+import { HomePage } from "./pages/HomePage";
+
+/*************************************************************************************
+ * Layouts of the application
+ */
 
 export const Layout = (
   component: React.FunctionComponent<any> | React.ComponentClass<any, any>
@@ -23,8 +26,11 @@ export const Layout = (
  */
 export const routes = {
   home: new NoArgsPathDef({
-    component: Layout(HomePage),
+    component: HomePage,
     pathDef: "/",
     exact: true,
   }),
 };
+
+// applying layout to all routes
+applyLayout(routes, Layout);
