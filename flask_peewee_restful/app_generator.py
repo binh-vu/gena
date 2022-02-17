@@ -6,11 +6,13 @@ from modulefinder import Module
 from pathlib import Path
 from typing import Union, List
 
-from flask import Flask, render_template, Blueprint
+from flask import Flask, render_template, Blueprint, send_from_directory
 
 
 def generate_app(
-    controllers: Union[List[Blueprint], Module], pkg_dir: Union[str, Path], log_sql_queries: bool = True
+    controllers: Union[List[Blueprint], Module],
+    pkg_dir: Union[str, Path],
+    log_sql_queries: bool = True,
 ):
     if log_sql_queries and os.environ.get("FLASK_ENV", "") == "development":
         # if debugging, log the SQL queries
@@ -25,9 +27,13 @@ def generate_app(
     )
     app.config["JSON_SORT_KEYS"] = False
 
-    @app.route("/", defaults={"_path": ""})
-    @app.route("/<path:_path>")
-    def home(_path):
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def home(path):
+        if path.find("/") == -1 and path.find(".") != -1:
+            if path.endswith(".json") or path.endswith(".ico") or path.endswith(".png"):
+                return send_from_directory(app.template_folder, path)
+
         return render_template("index.html")
 
     if isinstance(controllers, list):
