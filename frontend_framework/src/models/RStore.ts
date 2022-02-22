@@ -11,6 +11,7 @@ import { CancellablePromise } from "mobx/dist/api/flow";
 import { Record as DBRecord } from "./Record";
 import { message } from "antd";
 import { Index } from "./StoreIndex";
+import { result } from "lodash";
 
 export class StoreState {
   public _value: "updating" | "updated" | "error" = "updated";
@@ -84,10 +85,12 @@ export abstract class RStore<
   public name2field: Partial<Record<string, keyof M>>;
   // a list of (field name in the remote API, field name in the record)
   public nameAndField: [string, keyof M][];
-
-  protected remoteURL: string;
   // whether to reload the entity if the store already has an entity
   public refetch: boolean = true;
+  public batch: BatchFetchRequests<ID, M>;
+
+  protected remoteURL: string;
+
   protected indices: Index<M>[] = [];
 
   /**
@@ -113,6 +116,7 @@ export abstract class RStore<
       this.refetch = refetch;
     }
     this.indices = indices || [];
+    this.batch = new BatchFetchRequests(this, 50);
 
     makeObservable(this, {
       state: observable,
@@ -485,5 +489,121 @@ export abstract class RStore<
   /** Decode a query back to its original form */
   public decodeWhereQuery(encodedCondition: string): QueryConditions<M> {
     return JSON.parse(atob(encodedCondition));
+  }
+}
+
+class BatchFetchRequests<ID extends string | number, M extends DBRecord<ID>> {
+  // window size in ms that two requests within this window will be batched together
+  private window: number;
+  private requests: Set<ID>;
+  private store: RStore<ID, M>;
+  private callback?: NodeJS.Timeout;
+  // storing list of requests that we are executing but haven't got the results yet
+  private executingRequests: Map<ID, Promise<any>>;
+
+  constructor(store: RStore<ID, M>, window: number) {
+    this.store = store;
+    this.window = window;
+    this.requests = new Set();
+    this.executingRequests = new Map();
+  }
+
+  public fetchById(id: ID): Promise<M | undefined> {
+    this.requests.add(id);
+
+    if (this.callback !== undefined) {
+      clearTimeout(this.callback);
+    }
+
+    return new Promise((resolve, reject) => {
+      this.callback = setTimeout(() => {
+        const promise = this.exec();
+        promise.catch(reject);
+        promise.then(() => {
+          // in case it's still pending from previous requests
+          const m = this.executingRequests.get(id);
+          if (m !== undefined) {
+            // don't remove executingRequests as it will be removed automatically when the promise resolves
+            m.then(() => {
+              const r = this.store.records.get(id);
+              resolve(r === null ? undefined : r);
+            });
+          } else {
+            const r = this.store.records.get(id);
+            resolve(r === null ? undefined : r);
+          }
+        });
+      }, this.window);
+    });
+  }
+
+  public fetchByIds(ids: ID[]): Promise<Record<ID, M>> {
+    for (const id of ids) this.requests.add(id);
+
+    if (this.callback !== undefined) {
+      clearTimeout(this.callback);
+    }
+
+    return new Promise((resolve, reject) => {
+      this.callback = setTimeout(() => {
+        const promise = this.exec();
+        promise.catch(reject);
+        promise.then(() => {
+          const output = {} as Record<ID, M>;
+          const pendingPromises: [Promise<any>, ID][] = [];
+
+          for (const id of ids) {
+            const m = this.executingRequests.get(id);
+            if (m !== undefined) {
+              // don't remove executingRequests as it will be removed automatically when the promise resolves
+              pendingPromises.push([m, id]);
+            } else {
+              const record = this.store.records.get(id);
+              if (record !== null && record !== undefined) {
+                output[id] = record;
+              }
+            }
+          }
+
+          if (pendingPromises.length > 0) {
+            // waiting for pending requests to finish
+            Promise.all(pendingPromises.map((x) => x[0])).then(() => {
+              for (const [m, id] of pendingPromises) {
+                const record = this.store.records.get(id);
+                if (record !== null && record !== undefined) {
+                  output[id] = record;
+                }
+              }
+              resolve(output);
+            });
+          } else {
+            resolve(output);
+          }
+        });
+      }, this.window);
+    });
+  }
+
+  protected exec() {
+    // clear the callback as we are executing it
+    this.callback = undefined;
+
+    // sending out requests that is not executing
+    const reqs = Array.from(this.requests).filter(
+      (id) => !this.executingRequests.has(id)
+    );
+    // clean up the requests so the next callback can add
+    this.requests = new Set();
+
+    const promise = this.store.fetchByIds(reqs);
+
+    // adding the sending out requests into the executing queue
+    for (const req of reqs) this.executingRequests.set(req, promise);
+
+    return promise.then((result) => {
+      // clean up the executing requests
+      for (const req of reqs) this.executingRequests.delete(req);
+      return result;
+    });
   }
 }

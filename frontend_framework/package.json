@@ -1,6 +1,6 @@
 {
   "name": "rma-baseapp",
-  "version": "2.4.10",
+  "version": "2.5.0",
   "private": false,
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
