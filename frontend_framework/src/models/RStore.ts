@@ -87,7 +87,7 @@ export abstract class RStore<
 
   protected remoteURL: string;
   // whether to reload the entity if the store already has an entity
-  protected refetch: boolean = true;
+  public refetch: boolean = true;
   protected indices: Index<M>[] = [];
 
   /**
