@@ -367,12 +367,15 @@ class Path<
   /**
    * Handler for a mouse event navigation (e.g., linking on an <a> element)
    */
-  public mouseClickNavigationHandler = (e?: React.MouseEvent) => {
+  public mouseClickNavigationHandler = (
+    e?: React.MouseEvent,
+    openInNewPage?: boolean
+  ) => {
     if (e !== undefined) {
       e.preventDefault();
     }
 
-    if (e !== undefined && (e.ctrlKey || e.metaKey)) {
+    if (openInNewPage || (e !== undefined && (e.ctrlKey || e.metaKey))) {
       // holding ctrl or cmd key, we should open in new windows
       window.open(this.pathDef.getURL(this.urlArgs, this.queryArgs), "_blank");
       // keep the focus on this page

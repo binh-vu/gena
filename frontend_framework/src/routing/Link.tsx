@@ -33,18 +33,21 @@ export const InternalLink = <
 export const InternalLinkBtn = <
   U extends Record<string, keyof ArgType>,
   Q extends Record<string, keyof ArgType>
->(
-  props: {
-    path: PathDef<U, Q>;
-    urlArgs: ArgSchema<U>;
-    queryArgs: ArgSchema<Q>;
-  } & Omit<ButtonProps, "onClick">
-) => {
-  const { path, urlArgs, queryArgs, children, ...restprops } = props;
+>({
+  path,
+  urlArgs,
+  queryArgs,
+  openInNewPage = false,
+  children,
+  ...restprops
+}: {
+  path: PathDef<U, Q>;
+  urlArgs: ArgSchema<U>;
+  queryArgs: ArgSchema<Q>;
+  openInNewPage?: boolean;
+} & Omit<ButtonProps, "onClick">) => {
   const onClick = (e: any) => {
-    props.path
-      .path(props.urlArgs, props.queryArgs)
-      .mouseClickNavigationHandler(e);
+    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e, openInNewPage);
   };
 
   return (
