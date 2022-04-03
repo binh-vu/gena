@@ -1,6 +1,6 @@
 {
   "name": "rma-baseapp",
-  "version": "2.6.0",
+  "version": "2.6.2",
   "private": false,
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -29,6 +29,14 @@
     "react-scripts": "4.0.3",
     "typescript": "^4.1.2",
     "web-vitals": "^1.0.1"
+  },
+  "resolutions": {
+    "//": "See https://github.com/facebook/create-react-app/issues/11773",
+    "react-error-overlay": "6.0.9"
+  },
+  "devDependencies": {
+    "//": "See https://github.com/facebook/create-react-app/issues/11773",
+    "react-error-overlay": "6.0.9"
   },
   "scripts": {
     "build": "yarn build:esm && yarn build:cjs",

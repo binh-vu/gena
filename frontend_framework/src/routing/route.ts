@@ -44,7 +44,7 @@ export type ArgType = {
   boolean: boolean;
   optionalstring: string | undefined;
   optionalnumber: number | undefined;
-  optionalboolean: number | undefined;
+  optionalboolean: boolean | undefined;
 };
 
 export type ArgSchema<T extends Record<string, keyof ArgType>> = {

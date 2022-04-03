@@ -11,22 +11,20 @@ export default function App({
   enUSLocale?: boolean;
   routes: { [name: string]: PathDef<any, any> };
 }) {
-  const app = (
-    <Router history={history}>
-      <div className="app-body">
-        <Switch>
-          {Object.entries(routes).map(([key, route]) => (
-            <Route key={key} {...(route as PathDef<any, any>).routeDef} />
-          ))}
-          <Route component={NotFoundPage} />
-        </Switch>
-      </div>
-    </Router>
+  // has to wrap the config provider here when creating components
+  // otherwise, create components first, store in an object, and wrap won't work
+  return (
+    <ConfigProvider locale={enUSLocale === true ? enUSIntl : undefined}>
+      <Router history={history}>
+        <div className="app-body">
+          <Switch>
+            {Object.entries(routes).map(([key, route]) => (
+              <Route key={key} {...(route as PathDef<any, any>).routeDef} />
+            ))}
+            <Route component={NotFoundPage} />
+          </Switch>
+        </div>
+      </Router>
+    </ConfigProvider>
   );
-
-  if (enUSLocale === true) {
-    return <ConfigProvider locale={enUSIntl}>{app}</ConfigProvider>;
-  }
-
-  return app;
 }

@@ -64,7 +64,7 @@ export const ExternalLink = ({
   onCtrlClick,
   ...restprops
 }: {
-  href: string;
+  href?: string;
   openInNewPage?: boolean;
   onCtrlClick?: () => void;
 } & Omit<React.HTMLProps<HTMLAnchorElement>, "href" | "target" | "rel">) => {

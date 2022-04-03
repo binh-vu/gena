@@ -1,17 +1,16 @@
+import { message } from "antd";
 import axios, { AxiosError } from "axios";
 import {
-  observable,
-  flow,
   action,
-  runInAction,
   computed,
+  flow,
   makeObservable,
+  observable,
+  runInAction,
 } from "mobx";
 import { CancellablePromise } from "mobx/dist/api/flow";
 import { Record as DBRecord } from "./Record";
-import { message } from "antd";
 import { Index } from "./StoreIndex";
-import { result } from "lodash";
 
 export class StoreState {
   public _value: "updating" | "updated" | "error" = "updated";
@@ -72,15 +71,6 @@ export abstract class RStore<
   public state: StoreState = new StoreState();
   // null represent that entity does not exist on the server
   public records: Map<ID, M | null> = new Map();
-  public ajaxErrorHandler: (error: AxiosError<any>) => void = (
-    error: AxiosError<any>
-  ) => {
-    message.error(
-      "Error while talking with the server. Check console for more details.",
-      10
-    );
-    console.error(error);
-  };
   public field2name: Partial<Record<keyof M, string>>;
   public name2field: Partial<Record<string, keyof M>>;
   // a list of (field name in the remote API, field name in the record)
@@ -99,6 +89,7 @@ export abstract class RStore<
    * @param remoteURL RESTful endpoint for this store
    * @param field2name mapping from Record's field to the corresponding field name in the RESTful API
    * @param refetch whether to refetch the entity if it is already in the store
+   * @param indices list of indices to create
    */
   constructor(
     remoteURL: string,
@@ -124,6 +115,7 @@ export abstract class RStore<
       fetch: action,
       fetchOne: action,
       fetchById: action,
+      fetchByIds: action,
       set: action,
       list: computed,
     });
@@ -151,6 +143,9 @@ export abstract class RStore<
         }
 
         this.state.value = "updated";
+        result.records = result.records.map((record: any) =>
+          this.records.get(record.id)
+        );
         return result;
       } catch (error: any) {
         this.state.value = "error";
@@ -180,7 +175,7 @@ export abstract class RStore<
         this.index(record);
         this.state.value = "updated";
 
-        return record;
+        return this.records.get(record.id)!;
       });
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
@@ -194,7 +189,6 @@ export abstract class RStore<
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -224,7 +218,7 @@ export abstract class RStore<
         this.index(record);
         this.state.value = "updated";
 
-        return record;
+        return this.records.get(record.id)!;
       });
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
@@ -239,7 +233,6 @@ export abstract class RStore<
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -299,7 +292,6 @@ export abstract class RStore<
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -359,12 +351,11 @@ export abstract class RStore<
     try {
       resp = await axios.get(`${this.remoteURL}`, { params });
     } catch (error: any) {
-      this.ajaxErrorHandler(error);
       throw error;
     }
 
     return {
-      records: resp.data.items.map(this.deserialize),
+      records: resp.data.items.map(this.deserialize.bind(this)),
       total: resp.data.total,
     };
   }
@@ -381,11 +372,13 @@ export abstract class RStore<
         },
       });
     } catch (error: any) {
-      this.ajaxErrorHandler(error);
       throw error;
     }
 
-    return { records: resp.data.map(this.deserialize), total: resp.data.total };
+    return {
+      records: resp.data.map(this.deserialize.bind(this)),
+      total: resp.data.total,
+    };
   };
 
   /**
@@ -409,6 +402,7 @@ export abstract class RStore<
    */
   public set(m: M) {
     this.records.set(m.id, m);
+    this.index(m);
   }
 
   /**
@@ -462,7 +456,7 @@ export abstract class RStore<
   /**
    * Deserialize the data sent from the server to a record.
    */
-  public deserialize = (record: any): M => {
+  public deserialize(record: any): M {
     if (this.nameAndField.length > 0) {
       for (const [name, field] of this.nameAndField) {
         record[field] = record[name];
@@ -470,7 +464,7 @@ export abstract class RStore<
       }
     }
     return record;
-  };
+  }
 
   /**
    * Add a record to your indexes. Its implementation must be IDEMPOTENT

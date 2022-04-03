@@ -13,7 +13,7 @@ from werkzeug.exceptions import BadRequest, NotFound
 
 def generate_api(
     Model: Type[PeeweeModel],
-    deserializers: Dict[str, Callable[[Any], Any]] = None,
+    deserializers: Optional[Dict[str, Callable[[Any], Any]]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
     enable_truncate_table: bool = False,
@@ -299,10 +299,14 @@ def generate_api(
         except DoesNotExist as e:
             raise NotFound(f"Record {id} does not exist")
 
+        request_json = request.get_json()
+        if request_json is None:
+            raise BadRequest("Missing request body")
+
         for name, field in name2field.items():
-            if name in request.json:
+            if name in request_json:
                 try:
-                    value = deserializers[name](request.json[name])
+                    value = deserializers[name](request_json[name])
                 except ValueError as e:
                     raise ValueError(f"Field `{name}` {str(e)}")
 

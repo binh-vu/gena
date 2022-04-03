@@ -5,6 +5,10 @@ from peewee import Field
 from dataclasses import astuple, dataclass, fields
 
 
+# db_null = b"null"
+db_null = None
+
+
 class DataClassField(Field):
     field_type = "BLOB"
 
@@ -17,10 +21,12 @@ class DataClassField(Field):
             self.from_tuple = lambda x: CLS(*x)  # type: ignore
 
     def db_value(self, value):
+        if value is None:
+            return value
         return orjson.dumps(astuple(value))
 
     def python_value(self, value):
-        if value == b"null":
+        if value == db_null:
             return None
         value = orjson.loads(value)
         return self.from_tuple(value)
@@ -31,7 +37,7 @@ class ListDataClassField(DataClassField):
         return orjson.dumps([astuple(item) for item in value])
 
     def python_value(self, value):
-        if value == b"null":
+        if value == db_null:
             return None
 
         value = orjson.loads(value)
@@ -43,7 +49,7 @@ class DictDataClassField(DataClassField):
         return orjson.dumps({k: astuple(item) for k, item in value.items()})
 
     def python_value(self, value):
-        if value == b"null":
+        if value == db_null:
             return None
 
         value = orjson.loads(value)
@@ -61,7 +67,7 @@ class Dict2ListDataClassField(DataClassField):
             raise
 
     def python_value(self, value):
-        if value == b"null":
+        if value == db_null:
             return None
 
         value = orjson.loads(value)

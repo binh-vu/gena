@@ -196,6 +196,8 @@ def get_deserializer_from_type(
         return deserialize_int
     if annotated_type is float:
         return deserialize_float
+    if annotated_type is bool:
+        return deserialize_bool
     if annotated_type is type(None):
         return deserialize_none
     if is_dataclass(annotated_type):

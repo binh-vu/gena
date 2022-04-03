@@ -1,18 +1,14 @@
 import axios from "axios";
 import {
-  observable,
-  flow,
-  makeObservable,
-  runInAction,
   action,
+  makeObservable,
+  observable,
   override,
+  runInAction,
 } from "mobx";
-import { CancellablePromise } from "mobx/dist/api/flow";
 import {
   DraftCreateRecord,
   DraftUpdateRecord,
-  SimpleDraftCreateRecord,
-  SimpleDraftUpdateRecord,
   Record as DBRecord,
 } from "./Record";
 import { RStore } from "./RStore";
@@ -95,13 +91,12 @@ export abstract class CRUDStore<
         }
 
         this.state.value = "updated";
-        return record;
+        return this.records.get(record.id)!;
       });
     } catch (error: any) {
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -135,13 +130,12 @@ export abstract class CRUDStore<
         }
 
         this.state.value = "updated";
-        return record;
+        return this.records.get(record.id)!;
       });
     } catch (error: any) {
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -174,7 +168,6 @@ export abstract class CRUDStore<
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -204,7 +197,6 @@ export abstract class CRUDStore<
       runInAction(() => {
         this.state.value = "error";
       });
-      this.ajaxErrorHandler(error);
       throw error;
     }
   }
@@ -248,12 +240,32 @@ export abstract class CRUDStore<
   /**
    * Serialize the update to send to the server
    */
-  public abstract serializeUpdateDraft(record: U): object;
+  public serializeUpdateDraft(record: U): object {
+    return this.serializeRecord(record);
+  }
 
   /**
    * Serialize the create object to send to the server
    */
-  public abstract serializeCreateDraft(record: C): object;
+  public serializeCreateDraft(record: C): object {
+    return this.serializeRecord(record);
+  }
+
+  /**
+   * Serialize the record for sending to the server, fields are renamed
+   * if a mapping is provided (this.field2name).
+   */
+  protected serializeRecord(record: U | C): object {
+    const val: any = {};
+    for (const [k, v] of Object.entries(record)) {
+      if (this.field2name.hasOwnProperty(k)) {
+        val[this.field2name[k as unknown as keyof M]] = v;
+      } else {
+        val[k] = v;
+      }
+    }
+    return val;
+  }
 }
 
 export class SimpleCRUDStore<
@@ -294,28 +306,5 @@ export class SimpleCRUDStore<
       ),
       true
     );
-  }
-
-  public serializeUpdateDraft(
-    record: M & { markSaved(): void; toModel(): M | undefined }
-  ): object {
-    return this.serializeRecord(record);
-  }
-  public serializeCreateDraft(
-    record: Omit<M, "id"> & { draftID: string }
-  ): object {
-    return this.serializeRecord(record);
-  }
-
-  protected serializeRecord(record: M | Omit<M, "id">): object {
-    const val: any = {};
-    for (const [k, v] of Object.entries(record)) {
-      if (this.field2name.hasOwnProperty(k)) {
-        val[this.field2name[k as unknown as keyof M]] = v;
-      } else {
-        val[k] = v;
-      }
-    }
-    return val;
   }
 }
