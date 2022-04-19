@@ -3,7 +3,7 @@
 Framework to help to build (web) application faster.
 
 1. [`gena`](): generate restful APIs from peewee models (i.e., specification of database table).
-2. [`@gena/www`](): provides basic structure for frontend application (state management, routing).
+2. [`gena-app`](): provides basic structure for frontend application (state management, routing).
 
 For demo, see the [todolist folder](/examples/todolist).
 
@@ -17,7 +17,7 @@ We are going to build a simple todolist app to demonstrate how to use this frame
 2. move inside the project folder: `cd todolist`
 3. add our backend library: `poetry add gena`
 4. create a `www` directory containing your frontend code using [`create-react-app`](https://create-react-app.dev/docs/adding-typescript/): (`yarn create react-app www --template typescript`)
-5. add our frontend library: `cd www; yarn add @gena/www; cd ..` -- this will modify your [`www/package.json`](/todolist/www/package.json) file.
+5. add our frontend library: `cd www; yarn add gena-app; cd ..` -- this will modify your [`www/package.json`](/todolist/www/package.json) file.
 6. modify the build script in [`www/package.json`](/todolist/www/package.json) to tell `create-react-app` to build static files into [`todolist/www`](/todolist/todolist/www) directory inside the python package: `"build": "BUILD_PATH='../todolist/www' react-scripts build"`. This allows us to distribute both frontend and backend in a single python package.
 7. add `"proxy": "http://localhost:5000"` to the [`www/package.json`](/todolist/www/package.json). This allows us to send the request to the server during development.
 
@@ -112,7 +112,7 @@ To start, we create stores which contains all of the data of our application. A 
 Let's create a file [`www/src/models/TodoListStore.ts`](/todolist/www/src/models/TodoListStore.ts) and paste the following code:
 
 ```typescript
-import { SimpleCRUDStore } from "@gena/www";
+import { SimpleCRUDStore } from "gena-app";
 import { makeObservable, action } from "mobx";
 
 export interface Todo {
@@ -136,7 +136,7 @@ export class TodoListStore extends SimpleCRUDStore<number, Todo> {
 }
 ```
 
-In the above code, we create an interface `Todo` matched with the definition in our database schema. Since we didn't provide custom deserializer, the fields in our frontend is matched exactly with the fields in our database in the backend. Then, we define a store `TodoListStore` extending the `SimpleCRUDStore` from our frontend library `@gena/www`. This gives us several useful functions out of the box such as `create`, `delete`, `update`, and `query` the records from the server. We also define an additional function that will toggle the `checked` value of an `Todo` to show how to extend the store if needed.
+In the above code, we create an interface `Todo` matched with the definition in our database schema. Since we didn't provide custom deserializer, the fields in our frontend is matched exactly with the fields in our database in the backend. Then, we define a store `TodoListStore` extending the `SimpleCRUDStore` from our frontend library `gena-app`. This gives us several useful functions out of the box such as `create`, `delete`, `update`, and `query` the records from the server. We also define an additional function that will toggle the `checked` value of an `Todo` to show how to extend the store if needed.
 
 To use the stores with [React Hooks](https://reactjs.org/docs/hooks-intro.html), we need to following code in [`www/src/models/index.ts`](/todolist/www/src/models/index.ts)
 
@@ -165,7 +165,7 @@ Routing specifies which component the application should render for a particular
 Let's create a file `www/routes.tsx` and define our first route:
 
 ```typescript
-import { NoArgsPathDef } from "@gena/www";
+import { NoArgsPathDef } from "gena-app";
 import { HomePage } from "./pages/HomePage";
 
 export const routes = {
@@ -189,7 +189,7 @@ With the specified routes and a dummy `HomePage` component, the final piece is t
 
 ```typescript
 import ReactDOM from "react-dom";
-import { App } from "@gena/www";
+import { App } from "gena-app";
 import "./index.css";
 import { StoreContext, stores } from "./models";
 import reportWebVitals from "./reportWebVitals";
@@ -197,7 +197,7 @@ import { routes } from "./routes";
 
 ReactDOM.render(
   <StoreContext.Provider value={stores}>
-    <App enUSLocale={false} routes={routes} />
+    <App routes={routes} />
   </StoreContext.Provider>,
   document.getElementById("root")
 );

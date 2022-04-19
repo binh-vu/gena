@@ -1,4 +1,3 @@
-import { message } from "antd";
 export type {
   Record,
   JunctionRecord,
@@ -21,10 +20,12 @@ export * from "./StoreIndex";
  *
  * In Mar 2022, most of the important browsers support this feature except IE and Firefox for Android.
  */
-export const registerDefaultAxiosErrorHandler = () => {
+export const registerDefaultAxiosErrorHandler = (
+  fn: (event: PromiseRejectionEvent) => void
+) => {
   window.addEventListener("unhandledrejection", (event) => {
     if (event.reason.isAxiosError === true) {
-      message.error("Error while talking with the server.", 10);
+      fn(event);
       console.error(event.reason);
     }
   });

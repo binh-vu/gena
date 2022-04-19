@@ -1,5 +1,4 @@
 import React from "react";
-import { Button, ButtonProps } from "antd";
 import { ArgSchema, ArgType } from "./route";
 import { PLATFORM } from "../env";
 import { PathDef, routeAPIs } from "./route";
@@ -27,33 +26,6 @@ export const InternalLink = <
     <a href={path.getURL(urlArgs, queryArgs)} onClick={onClick} {...restprops}>
       {children}
     </a>
-  );
-};
-
-export const InternalLinkBtn = <
-  U extends Record<string, keyof ArgType>,
-  Q extends Record<string, keyof ArgType>
->({
-  path,
-  urlArgs,
-  queryArgs,
-  openInNewPage = false,
-  children,
-  ...restprops
-}: {
-  path: PathDef<U, Q>;
-  urlArgs: ArgSchema<U>;
-  queryArgs: ArgSchema<Q>;
-  openInNewPage?: boolean;
-} & Omit<ButtonProps, "onClick">) => {
-  const onClick = (e: any) => {
-    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e, openInNewPage);
-  };
-
-  return (
-    <Button onClick={onClick} {...restprops}>
-      {children}
-    </Button>
   );
 };
 

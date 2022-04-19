@@ -3,6 +3,9 @@
   "packages": {
     "rma-baseapp": {
       "signature": "1d61a067f53aeac66cc85a5fe5143ce2"
+    },
+    "gena-app": {
+      "signature": "08053a52dbd5c12325e0866eef607ff9"
     }
   }
 }

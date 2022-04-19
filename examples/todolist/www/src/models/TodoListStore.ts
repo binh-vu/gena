@@ -1,4 +1,4 @@
-import { Record, SimpleCRUDStore } from "rma-baseapp";
+import { Record, SimpleCRUDStore } from "gena-app";
 
 export interface Todo extends Record<number> {
   id: number;

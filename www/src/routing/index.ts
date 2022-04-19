@@ -1,12 +1,7 @@
 import { Location } from "history";
 import { matchPath } from "react-router";
 import { PathDef, ReactComponent, ArgType } from "./route";
-export {
-  ExternalLink,
-  InternalHTMLLink,
-  InternalLink,
-  InternalLinkBtn,
-} from "./Link";
+export { ExternalLink, InternalHTMLLink, InternalLink } from "./Link";
 export {
   history,
   PathDef,

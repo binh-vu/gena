@@ -1,7 +1,8 @@
 import { Space } from "antd";
 import React from "react";
-import { applyLayout, CenterNavBar, NoArgsPathDef } from "rma-baseapp";
+import { applyLayout, NoArgsPathDef } from "gena-app";
 import { HomePage } from "./pages/HomePage";
+import { CenterNavBar } from "./components/NavBar";
 
 /*************************************************************************************
  * Layouts of the application

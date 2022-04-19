@@ -1,5 +1,4 @@
 export * from "./models";
-export * from "./pages";
-export * from "./routing";
 export * from "./components";
+export * from "./routing";
 export { default as App } from "./App";

@@ -1,5 +1,4 @@
-import { message } from "antd";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import {
   action,
   computed,
@@ -562,7 +561,8 @@ class BatchFetchRequests<ID extends string | number, M extends DBRecord<ID>> {
           if (pendingPromises.length > 0) {
             // waiting for pending requests to finish
             Promise.all(pendingPromises.map((x) => x[0])).then(() => {
-              for (const [m, id] of pendingPromises) {
+              for (const m_n_id of pendingPromises) {
+                const id = m_n_id[1];
                 const record = this.store.records.get(id);
                 if (record !== null && record !== undefined) {
                   output[id] = record;

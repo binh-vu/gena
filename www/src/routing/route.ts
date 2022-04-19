@@ -1,38 +1,11 @@
 import { Location } from "history";
 import { PLATFORM } from "../env";
 import { createBrowserHistory, createMemoryHistory } from "history";
-import { Modal } from "antd";
 import { matchPath, useLocation } from "react-router";
 import React, { useMemo } from "react";
 
-function getUserConfirmation(
-  message: string,
-  callback: (result: boolean) => void
-) {
-  Modal.confirm({
-    title: message,
-    okText: "Leave",
-    okType: "primary",
-    okButtonProps: { danger: true },
-    cancelText: "Stay",
-    onOk() {
-      callback(true);
-    },
-    onCancel() {
-      // reverse ok and cancel doesn't work since antd detect escape keyword as cancel.
-      callback(false);
-    },
-  });
-}
-
 export const history =
-  PLATFORM === "native"
-    ? createMemoryHistory({
-        getUserConfirmation,
-      })
-    : createBrowserHistory({
-        getUserConfirmation,
-      });
+  PLATFORM === "native" ? createMemoryHistory() : createBrowserHistory();
 
 export type ReactComponent =
   | React.ComponentClass<any, any>

@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom";
-import { App } from "rma-baseapp";
+import { App } from "gena-app";
 import "./index.css";
 import { StoreContext, stores } from "./models";
 import reportWebVitals from "./reportWebVitals";
@@ -7,7 +7,7 @@ import { routes } from "./routes";
 
 ReactDOM.render(
   <StoreContext.Provider value={stores}>
-    <App enUSLocale={false} routes={routes} />
+    <App routes={routes} />
   </StoreContext.Provider>,
   document.getElementById("root")
 );
