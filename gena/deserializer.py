@@ -13,7 +13,7 @@ from typing import (
     get_type_hints,
     _TypedDictMeta,  # type: ignore
 )
-from flask_peewee_restful.custom_fields import (
+from gena.custom_fields import (
     DataClassField,
     Dict2ListDataClassField,
     DictDataClassField,

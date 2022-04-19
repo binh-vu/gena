@@ -5,7 +5,7 @@ from functools import partial
 from typing import Mapping, Type, Callable, Any, List, Optional, Dict
 
 from flask import Blueprint, json, request, jsonify
-from flask_peewee_restful.deserializer import generate_deserializer
+from gena.deserializer import generate_deserializer
 from peewee import Model as PeeweeModel, DoesNotExist, fn
 from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound

@@ -1,5 +1,5 @@
 import os
-from flask_peewee_restful import generate_app, generate_api
+from gena import generate_app, generate_api
 from todolist.models import TodoList
 
 app = generate_app(
