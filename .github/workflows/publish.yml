@@ -1,0 +1,46 @@
+name: publish
+on:
+  push:
+    branches:
+      - main
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup python
+        uses: actions/setup-python@v3.1.0
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          pip install poetry twine
+          poetry install
+      # - name: test
+      #   run: poetry run pytest -x
+      - name: build
+        run: poetry build
+      - name: publish
+        run: twine upload --skip-existing dist/* -u $PYPI_USER -p $PYPI_PWD
+        env:
+          PYPI_USER: __token__
+          PYPI_PWD: ${{ secrets.PYPI_TOKEN }}
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          registry-url: "https://registry.npmjs.org"
+          always-auth: true
+      - name: install dependencies
+        working-directory: ./www
+        run: yarn install
+      - name: build
+        working-directory: ./www
+        run: yarn build
+      - name: publish
+        working-directory: ./www
+        run: yarn publish
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

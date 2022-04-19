@@ -2,6 +2,10 @@
   "name": "gena-app",
   "version": "3.0.0",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/binh-vu/gena.git"
+  },
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
   "types": "./lib/esm/index.d.ts",
