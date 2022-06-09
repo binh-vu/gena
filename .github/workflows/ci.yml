@@ -61,9 +61,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
+          path: dist
       - uses: actions/download-artifact@v3
         with:
           name: www
+          path: www/lib
       - name: pypi publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
