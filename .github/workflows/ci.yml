@@ -59,6 +59,10 @@ jobs:
           node-version: "16"
           registry-url: "https://registry.npmjs.org"
           always-auth: true
+      - name: setup python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
       - uses: actions/download-artifact@v3
         with:
           name: wheels
@@ -68,12 +72,12 @@ jobs:
           name: www
           path: www/lib
       - name: pypi publish
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: true
-          print_hash: true
+        run: |
+          pip install twine
+          twine upload --skip-existing dist/* -u $PYPI_USER -p $PYPI_PWD
+        env:
+          PYPI_USER: __token__
+          PYPI_PWD: ${{ secrets.PYPI_TOKEN }}
       - name: npm publish
         working-directory: ./www
         run: >
