@@ -15,8 +15,8 @@ jobs:
           python-version: 3.8
       - name: install dependencies
         run: |
-          pip install poetry twine
-          poetry install
+          pip install poetry
+          # poetry install
       - name: build
         run: poetry build
       - name: upload backend dist
