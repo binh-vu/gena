@@ -65,7 +65,7 @@ jobs:
         with:
           name: www
       - name: pypi publish
-        use: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
