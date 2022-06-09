@@ -80,7 +80,8 @@ export abstract class RStore<
 
   protected remoteURL: string;
 
-  protected indices: Index<M>[] = [];
+  // storing index, has to make it public to make it observable, but you should treat it as protected
+  public indices: Index<M>[] = [];
 
   /**
    * Constructor
@@ -111,6 +112,7 @@ export abstract class RStore<
     makeObservable(this, {
       state: observable,
       records: observable,
+      indices: observable,
       fetch: action,
       fetchOne: action,
       fetchById: action,
