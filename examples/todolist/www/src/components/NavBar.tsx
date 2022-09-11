@@ -1,10 +1,10 @@
 import { Menu } from "antd";
-import { WithStyles, withStyles } from "@material-ui/styles";
+import { makeStyles } from "@mui/styles";
 import { useLocation } from "react-router-dom";
 import { getActiveRouteName, PathDef } from "gena-app";
 import React from "react";
 
-const css = {
+const useStyles = makeStyles({
   centerNavBar: {
     justifyContent: "center",
     boxShadow: "0 2px 8px #f0f1f2",
@@ -27,7 +27,7 @@ const css = {
     paddingRight: 24,
     boxShadow: "0 2px 8px #f0f1f2",
   },
-};
+});
 
 type MenuItemProps = {
   children: string | JSX.Element;
@@ -43,86 +43,78 @@ interface Props<R> {
   style?: React.CSSProperties;
   isFirstItemLogo?: boolean;
 }
-type Component = <R extends Record<any, PathDef<any, any>>>(
-  p: Props<R>
-) => JSX.Element;
 
-export const CenterNavBar = withStyles(css)(
-  <R extends Record<any, PathDef<any, any>>>({
-    classes,
-    menus,
-    routes,
-    className,
-    style,
-    isFirstItemLogo,
-  }: Props<R> & WithStyles<typeof css>) => {
-    const location = useLocation();
-    const openMenu = (e: { key: keyof R }) => {
-      routes[e.key].path({}, {}).open();
-    };
+export const CenterNavBar = <R extends Record<any, PathDef<any, any>>>({
+  menus,
+  routes,
+  className,
+  style,
+  isFirstItemLogo,
+}: Props<R>) => {
+  const classes = useStyles();
+  const location = useLocation();
+  const openMenu = (e: { key: keyof R }) => {
+    routes[e.key].path({}, {}).open();
+  };
 
-    const items = Object.keys(menus).map((routeName, index) => {
-      const className = isFirstItemLogo === true && index === 0 ? "logo" : "";
-      return getMenuItem(routeName, className, menus[routeName]!);
-    });
-    const activeRouteName = getActiveRouteName(location, routes);
+  const items = Object.keys(menus).map((routeName, index) => {
+    const className = isFirstItemLogo === true && index === 0 ? "logo" : "";
+    return getMenuItem(routeName, className, menus[routeName]!);
+  });
+  const activeRouteName = getActiveRouteName(location, routes);
 
-    return (
-      <Menu
-        mode="horizontal"
-        className={
-          classes.centerNavBar +
-          (className !== undefined ? " " + className : "")
-        }
-        style={style}
-        onClick={openMenu}
-        selectedKeys={
-          activeRouteName !== undefined ? [activeRouteName] : undefined
-        }
-      >
-        {items}
-      </Menu>
-    );
-  }
-) as Component;
+  return (
+    <Menu
+      mode="horizontal"
+      className={
+        classes.centerNavBar + (className !== undefined ? " " + className : "")
+      }
+      style={style}
+      onClick={openMenu}
+      selectedKeys={
+        activeRouteName !== undefined ? [activeRouteName] : undefined
+      }
+    >
+      {items}
+    </Menu>
+  );
+};
 
-export const LeftNavBar = withStyles(css)(
-  <R extends Record<any, PathDef<any, any>>>({
-    classes,
-    menus,
-    routes,
-    className,
-    style,
-    isFirstItemLogo,
-  }: Props<R> & WithStyles<typeof css>) => {
-    const location = useLocation();
-    const openMenu = (e: { key: keyof R }) => {
-      routes[e.key].path({}, {}).open();
-    };
+export const LeftNavBar = <R extends Record<any, PathDef<any, any>>>({
+  menus,
+  routes,
+  className,
+  style,
+  isFirstItemLogo,
+}: Props<R>) => {
+  const classes = useStyles();
+  const location = useLocation();
+  const openMenu = (e: { key: keyof R }) => {
+    routes[e.key].path({}, {}).open();
+  };
 
-    const items = Object.keys(menus).map((routeName, index) => {
-      const className = isFirstItemLogo === true && index === 0 ? "logo" : "";
-      return getMenuItem(routeName, className, menus[routeName]!);
-    });
-    const activeRouteName = getActiveRouteName(location, routes);
+  const items = Object.keys(menus).map((routeName, index) => {
+    const className = isFirstItemLogo === true && index === 0 ? "logo" : "";
+    return getMenuItem(routeName, className, menus[routeName]!);
+  });
+  const activeRouteName = getActiveRouteName(location, routes);
 
-    return (
-      <Menu
-        mode="horizontal"
-        className={
-          classes.leftNavBar + (className !== undefined ? " " + className : "")
-        }
-        style={style}
-        onClick={openMenu}
-        selectedKeys={
-          activeRouteName !== undefined ? [activeRouteName] : undefined
-        }
-      >
-        {items}
-      </Menu>
-    );
-  }
-) as Component;
+  return (
+    <Menu
+      mode="horizontal"
+      className={
+        classes.leftNavBar + (className !== undefined ? " " + className : "")
+      }
+      style={style}
+      onClick={openMenu}
+      selectedKeys={
+        activeRouteName !== undefined ? [activeRouteName] : undefined
+      }
+    >
+      {items}
+    </Menu>
+  );
+};
 
 function getMenuItem(
   key: string,

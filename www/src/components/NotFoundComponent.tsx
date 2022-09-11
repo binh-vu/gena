@@ -1,8 +1,8 @@
-import { withStyles, WithStyles } from "@material-ui/styles";
+import { makeStyles } from "@mui/styles";
 import { routeAPIs } from "../routing";
 import { NoArgsPathDef } from "../routing/route";
 
-const styles = {
+const useStyles = makeStyles({
   container: {
     fontFamily:
       "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, apple color emoji, segoe ui emoji, Segoe UI Symbol, noto color emoji",
@@ -41,32 +41,31 @@ const styles = {
     borderRadius: 2,
     cursor: "pointer",
   },
-} as const;
+} as const);
 
 const onClickGoHome = new NoArgsPathDef({
   component: () => null,
   pathDef: "/",
 }).path().mouseClickNavigationHandler;
 
-const NotFoundComponent = withStyles(styles)(
-  ({ classes }: WithStyles<typeof styles>) => {
-    return (
-      <div className={classes.container}>
-        <div className={classes.title}>404</div>
-        <div className={classes.subTitle}>
-          Sorry, the page you visited does not exist.
-        </div>
-        <div className={classes.navigation}>
-          <button className={classes.btn} onClick={routeAPIs.goBack}>
-            Back
-          </button>
-          <button className={classes.btn} onClick={onClickGoHome}>
-            Home
-          </button>
-        </div>
+const NotFoundComponent = () => {
+  const classes = useStyles();
+  return (
+    <div className={classes.container}>
+      <div className={classes.title}>404</div>
+      <div className={classes.subTitle}>
+        Sorry, the page you visited does not exist.
       </div>
-    );
-  }
-);
+      <div className={classes.navigation}>
+        <button className={classes.btn} onClick={routeAPIs.goBack}>
+          Back
+        </button>
+        <button className={classes.btn} onClick={onClickGoHome}>
+          Home
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default NotFoundComponent;

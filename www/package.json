@@ -1,6 +1,6 @@
- {
+{
   "name": "gena-app",
-  "version": "3.0.1",
+  "version": "4.0.0",
   "private": false,
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "/lib"
   ],
   "dependencies": {
-    "@material-ui/styles": "^4.11.4",
+    "@mui/styles": "^5.10.3",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -23,7 +23,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/react-router-dom": "^5.1.9",
-    "axios": "^0.21.4",
+    "axios": "^0.27.2",
     "mobx": "^6.3.5",
     "mobx-react": "^7.2.1",
     "react": "^17.0.2",

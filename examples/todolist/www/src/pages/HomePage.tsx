@@ -7,7 +7,7 @@ export const HomePage = observer(() => {
   const { todolistStore } = useStores();
   useEffect(() => {
     todolistStore.fetch({ limit: 1000, offset: 0 });
-  }, []);
+  }, [todolistStore]);
 
   const items = todolistStore.list.map((item) => {
     return (
