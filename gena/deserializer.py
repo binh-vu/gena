@@ -66,7 +66,7 @@ def generate_deserializer(
                 else:
                     func = deserialize_str
             else:
-                # a catch here, JSONField is a subclass of _StringField
+                # a catch here, JSONField is a subclass of _StringField & TextField
                 # so we check if its type hint
                 if name not in field_type_hints:
                     raise Exception(
@@ -203,7 +203,7 @@ def get_deserializer_from_type(
     if is_dataclass(annotated_type):
         return get_dataclass_deserializer(annotated_type, known_type_deserializers)
     if isinstance(annotated_type, _TypedDictMeta):
-        # is_typeddict is not supported at python 3.8 yet        
+        # is_typeddict is not supported at python 3.8 yet
         total = annotated_type.__total__
         field2deserializer = {}
 
@@ -216,7 +216,7 @@ def get_deserializer_from_type(
                     raise ValueError(f"expect field {field} but it's missing")
                 output[field] = func(value[field])
             return output
-        
+
         # assign first to support recursive type in the field
         known_type_deserializers[annotated_type] = deserialize_typed_dict
 
@@ -231,7 +231,7 @@ def get_deserializer_from_type(
             # they can inject any key as the semantic of total
             del known_type_deserializers[annotated_type]
             return None
-        
+
         return deserialize_typed_dict
 
     args = get_args(annotated_type)

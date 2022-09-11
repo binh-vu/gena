@@ -10,6 +10,8 @@ from peewee import Model as PeeweeModel, DoesNotExist, fn
 from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound
 
+from gena.serializer import get_peewee_serializer
+
 
 def generate_api(
     Model: Type[PeeweeModel],
@@ -50,7 +52,8 @@ def generate_api(
         elif batch_serialize is not None:
             serialize = lambda x: batch_serialize([x])[0]
         else:
-            serialize = partial(model_to_dict, recurse=False)
+            # serialize = partial(model_to_dict, recurse=False)
+            serialize = get_peewee_serializer(Model)
 
     if batch_serialize is None:
         assert serialize is not None
