@@ -186,7 +186,7 @@ def get_deserialize_dict(deserialize_item: Deserializer):
 
 
 def get_deserializer_from_type(
-    annotated_type, known_type_deserializers: Dict[str, Deserializer]
+    annotated_type, known_type_deserializers: Dict[Any, Deserializer]
 ) -> Optional[Deserializer]:
     if annotated_type in known_type_deserializers:
         return known_type_deserializers[annotated_type]
@@ -203,18 +203,9 @@ def get_deserializer_from_type(
     if is_dataclass(annotated_type):
         return get_dataclass_deserializer(annotated_type, known_type_deserializers)
     if isinstance(annotated_type, _TypedDictMeta):
-        # is_typeddict is not supported at python 3.8 yet
+        # is_typeddict is not supported at python 3.8 yet        
         total = annotated_type.__total__
         field2deserializer = {}
-        for field, field_type in annotated_type.__annotations__.items():
-            func = get_deserializer_from_type(field_type, known_type_deserializers)
-            if func is None:
-                return None
-            field2deserializer[field] = func
-
-        if not total:
-            # they can inject any key as the semantic of total
-            return None
 
         def deserialize_typed_dict(value):
             if not isinstance(value, dict):
@@ -223,9 +214,24 @@ def get_deserializer_from_type(
             for field, func in field2deserializer.items():
                 if field not in value:
                     raise ValueError(f"expect field {field} but it's missing")
-                output[field] = field2deserializer[field](value[field])
+                output[field] = func(value[field])
             return output
+        
+        # assign first to support recursive type in the field
+        known_type_deserializers[annotated_type] = deserialize_typed_dict
 
+        for field, field_type in annotated_type.__annotations__.items():
+            func = get_deserializer_from_type(field_type, known_type_deserializers)
+            if func is None:
+                del known_type_deserializers[annotated_type]
+                return None
+            field2deserializer[field] = func
+
+        if not total:
+            # they can inject any key as the semantic of total
+            del known_type_deserializers[annotated_type]
+            return None
+        
         return deserialize_typed_dict
 
     args = get_args(annotated_type)
@@ -301,23 +307,12 @@ def get_deserializer_from_type(
 
 
 def get_dataclass_deserializer(
-    CLS, known_type_deserializers: Dict[str, Deserializer]
+    CLS, known_type_deserializers: Dict[Any, Deserializer]
 ) -> Optional[Deserializer]:
     # extract deserialize for each field
     field2deserializer: Dict[str, Deserializer] = {}
     field2optional: Dict[str, bool] = {}
     field_types = get_type_hints(CLS)
-
-    for field in fields(CLS):
-        field_type = field_types[field.name]
-        func = get_deserializer_from_type(field_type, known_type_deserializers)
-        if func is None:
-            # can't automatically figure out its child deserializer
-            return None
-        field2deserializer[field.name] = func
-        field2optional[field.name] = get_origin(field_type) is Union and type(
-            None
-        ) in get_args(field_type)
 
     def deserialize_dataclass(value):
         if not isinstance(value, dict):
@@ -331,6 +326,21 @@ def get_dataclass_deserializer(
                 # not optional field but missing
                 raise ValueError(f"expect the field {field} but it's missing")
         return CLS(**output)
+
+    # assign first to support recursive type in the field
+    known_type_deserializers[CLS] = deserialize_dataclass
+
+    for field in fields(CLS):
+        field_type = field_types[field.name]
+        func = get_deserializer_from_type(field_type, known_type_deserializers)
+        if func is None:
+            # can't automatically figure out its child deserializer
+            del known_type_deserializers[CLS]
+            return None
+        field2deserializer[field.name] = func
+        field2optional[field.name] = get_origin(field_type) is Union and type(
+            None
+        ) in get_args(field_type)
 
     return deserialize_dataclass
 
