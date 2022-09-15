@@ -80,6 +80,7 @@ def get_peewee_serializer(
             known_type_serializer[k] = v
 
     field2func = {}
+    foreign_keys = []
     for name, field in fields.items():
         if name in exclude_fields:
             continue
@@ -87,10 +88,15 @@ def get_peewee_serializer(
         func = None
         if isinstance(
             field,
-            (IntegerField, FloatField, BooleanField, _StringField, ForeignKeyField),
+            (IntegerField, FloatField, BooleanField, _StringField),
         ):
             # event if it is JSON, we keep the raw value (which is dictionary -- python value)
             func = None
+        elif isinstance(field, ForeignKeyField):
+            # handle foreign key separately to avoid extra query whenever we use the
+            # proxy object
+            foreign_keys.append([name, f"{name}_id"])
+            continue
         elif isinstance(field, DataClassField):
             try:
                 func = get_dataclass_serializer(field.CLS, known_type_serializer)
@@ -122,6 +128,8 @@ def get_peewee_serializer(
                 output[name] = func(value)
             else:
                 output[name] = value
+        for name, name2 in foreign_keys:
+            output[name] = getattr(record, name2)
         return output
 
     return serialize_model
@@ -163,6 +171,14 @@ def get_serializer_from_type(
             return None
         return get_deserialize_dict(ser_value)
 
+    if origin is Union:
+        return get_serialize_union(
+            classes=args,
+            serializers=[
+                get_serializer_from_type(arg, known_type_serializer) for arg in args
+            ],
+        )
+
     raise NoDerivedSerializer(annotated_type)
 
 
@@ -172,10 +188,10 @@ def get_dataclass_serializer(
     field2serializer: Dict[str, Optional[Serializer]] = {}
     field_types = get_type_hints(CLS)
 
-    def serialize_dataclass(value):
+    def serialize_dataclass(obj):
         output = {}
         for field, serializer in field2serializer.items():
-            value = getattr(CLS, field)
+            value = getattr(obj, field)
             if serializer is None:
                 output[field] = value
             else:
@@ -243,3 +259,13 @@ def get_serialize_dict(serializer):
         return {key: serializer(item) for key, item in value.items()}
 
     return serialize_dict
+
+
+def get_serialize_union(classes, serializers):
+    def serialize_union(value):
+        for cls, serializer in zip(classes, serializers):
+            if isinstance(value, cls):
+                return serializer(value)
+        raise ValueError(f"Cannot serialize {value}")
+
+    return serialize_union

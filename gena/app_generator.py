@@ -13,10 +13,13 @@ def generate_app(
     controllers: Union[List[Blueprint], Module],
     pkg_dir: Union[str, Path],
     log_sql_queries: bool = True,
-):
-    if log_sql_queries and os.environ.get("FLASK_ENV", "") == "development":
+) -> Flask:
+    if log_sql_queries and any(
+        os.environ.get(key, "") == "development" for key in ["FLASK_ENV", "FLASK_DEBUG"]
+    ):
         # if debugging, log the SQL queries
         logger = logging.getLogger("peewee")
+        logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.DEBUG)
 
     app = Flask(
@@ -25,7 +28,7 @@ def generate_app(
         static_folder=os.path.join(pkg_dir, "www/static"),
         static_url_path="/static",
     )
-    app.config["JSON_SORT_KEYS"] = False
+    app.config["app.json.sort_keys"] = False
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
