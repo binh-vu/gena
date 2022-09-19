@@ -55,8 +55,10 @@ class NoDerivedSerializer(Exception):
         return f"cannot derive serializer for type: {list(reversed(self.error_trace))}"
 
 
-def datetime_serializer(value: datetime):
+def datetime_serializer(value: Optional[datetime]):
     # return the number of milliseconds since the UNIX epoch
+    if value is None:
+        return None
     return round(value.timestamp() * 1000)
 
 
@@ -189,6 +191,9 @@ def get_dataclass_serializer(
     field_types = get_type_hints(CLS)
 
     def serialize_dataclass(obj):
+        if obj is None:
+            return None
+
         output = {}
         for field, serializer in field2serializer.items():
             value = getattr(obj, field)
@@ -226,6 +231,9 @@ def get_typeddict_serializer(
     field2deserializer = {}
 
     def serialize_typeddict(value):
+        if value is None:
+            return None
+
         output = {}
         for field, deserializer in field2deserializer.items():
             value = getattr(typeddict, field)
@@ -249,6 +257,8 @@ def get_typeddict_serializer(
 
 def get_serialize_sequence(serializer):
     def serialize_list(value):
+        if value is None:
+            return None
         return [serializer(item) for item in value]
 
     return serialize_list
@@ -256,6 +266,8 @@ def get_serialize_sequence(serializer):
 
 def get_serialize_dict(serializer):
     def serialize_dict(value):
+        if value is None:
+            return None
         return {key: serializer(item) for key, item in value.items()}
 
     return serialize_dict
@@ -263,6 +275,8 @@ def get_serialize_dict(serializer):
 
 def get_serialize_union(classes, serializers):
     def serialize_union(value):
+        if value is None:
+            return None
         for cls, serializer in zip(classes, serializers):
             if isinstance(value, cls):
                 return serializer(value)
