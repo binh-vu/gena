@@ -34,19 +34,41 @@ from peewee import (
 from dataclasses import fields, is_dataclass
 
 
+class NoDerivedDeserializer(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error_trace = []
+
+    def get_root_field(self):
+        return self.error_trace[-1]
+
+    def add_trace(self, *parents: str):
+        self.error_trace.extend(reversed(parents))
+        return self
+
+    def __str__(self) -> str:
+        return f"cannot derive deserializer for: {list(reversed(self.error_trace))}"
+
+
 Deserializer = Callable[[Any], Any]
 
 
 def generate_deserializer(
-    Model: Type[Model], known_type_deserializers: Dict[Any, Deserializer] = None
+    Model: Type[Model],
+    known_type_deserializers: Optional[Dict[Any, Deserializer]] = None,
+    known_field_deserializers: Optional[Set[str]] = None,
 ) -> Dict[str, Deserializer]:
     known_type_deserializers = known_type_deserializers or {}
+    known_field_deserializers = known_field_deserializers or set()
+
     fields = Model._meta.fields
     field_type_hints = get_type_hints(Model)
 
     output = {}
     for name, field in fields.items():
-        func = None
+        if name in known_field_deserializers:
+            continue
+
         if isinstance(field, IntegerField):
             func = deserialize_int
         elif isinstance(field, FloatField):
@@ -62,7 +84,6 @@ def generate_deserializer(
                     func = get_deserializer_from_type(
                         field_type_hints[name], known_type_deserializers
                     )
-                    assert func is not None
                 else:
                     func = deserialize_str
             else:
@@ -76,20 +97,15 @@ def generate_deserializer(
                     func = get_deserializer_from_type(
                         field_type_hints[name], known_type_deserializers
                     )
-                    if func is None:
-                        continue
                 else:
                     func = deserialize_str
         elif isinstance(field, ForeignKeyField):
             if field.field_type.upper() == "INT":
                 func = deserialize_int
             else:
-                continue
+                raise NoDerivedDeserializer().add_trace(Model.__qualname__, name)
         elif isinstance(field, DataClassField):
             func = get_dataclass_deserializer(field.CLS, known_type_deserializers)
-            if func is None:
-                continue
-
             if type(field) is ListDataClassField:
                 func = get_deserialize_list(func)
             elif type(field) is DictDataClassField:
@@ -97,9 +113,10 @@ def generate_deserializer(
             elif type(field) is Dict2ListDataClassField:
                 func = get_deserialize_dict(get_deserialize_list(func))
         else:
-            continue
+            raise NoDerivedDeserializer().add_trace(Model.__qualname__, name)
 
-        assert func is not None
+        if field.null:
+            func = get_deserialize_nullable(func)
         output[name] = func
     return output
 
@@ -158,6 +175,15 @@ def deserialize_none(value):
     return value
 
 
+def get_deserialize_nullable(deserialize_item: Deserializer):
+    def deserialize_nullable(value):
+        if value is None:
+            return None
+        return deserialize_item(value)
+
+    return deserialize_nullable
+
+
 def get_deserialize_list(deserialize_item: Deserializer):
     def deserialize_list(value):
         if not isinstance(value, list):
@@ -187,7 +213,7 @@ def get_deserialize_dict(deserialize_item: Deserializer):
 
 def get_deserializer_from_type(
     annotated_type, known_type_deserializers: Dict[Any, Deserializer]
-) -> Optional[Deserializer]:
+) -> Deserializer:
     if annotated_type in known_type_deserializers:
         return known_type_deserializers[annotated_type]
     if annotated_type is str:
@@ -204,42 +230,14 @@ def get_deserializer_from_type(
         return get_dataclass_deserializer(annotated_type, known_type_deserializers)
     if isinstance(annotated_type, _TypedDictMeta):
         # is_typeddict is not supported at python 3.8 yet
-        total = annotated_type.__total__
-        field2deserializer = {}
-
-        def deserialize_typed_dict(value):
-            if not isinstance(value, dict):
-                raise ValueError("expect dictionary but get {value}")
-            output = {}
-            for field, func in field2deserializer.items():
-                if field not in value:
-                    raise ValueError(f"expect field {field} but it's missing")
-                output[field] = func(value[field])
-            return output
-
-        # assign first to support recursive type in the field
-        known_type_deserializers[annotated_type] = deserialize_typed_dict
-
-        for field, field_type in annotated_type.__annotations__.items():
-            func = get_deserializer_from_type(field_type, known_type_deserializers)
-            if func is None:
-                del known_type_deserializers[annotated_type]
-                return None
-            field2deserializer[field] = func
-
-        if not total:
-            # they can inject any key as the semantic of total
-            del known_type_deserializers[annotated_type]
-            return None
-
-        return deserialize_typed_dict
+        return get_typeddict_deserializer(annotated_type, known_type_deserializers)
 
     args = get_args(annotated_type)
     origin = get_origin(annotated_type)
 
     if origin is None or len(args) == 0:
         # we can't handle this type, e.g., some class that are not dataclass, or simply just list or set (not enough information)
-        return None
+        raise NoDerivedDeserializer().add_trace(annotated_type)
 
     # handle literal first
     if origin is Literal:
@@ -259,7 +257,10 @@ def get_deserializer_from_type(
         get_deserializer_from_type(arg, known_type_deserializers) for arg in args
     ]
     if any(fn is None for fn in arg_desers):
-        return None
+        raise NoDerivedDeserializer().add_trace(
+            annotated_type,
+            next((arg for fn, arg in zip(arg_desers, args) if fn is None)),
+        )
 
     deserialize_args: Deserializer
     if len(arg_desers) == 1:
@@ -303,12 +304,48 @@ def get_deserializer_from_type(
         return deserialize_args
 
     # do we exhaust the list of built-in types?
-    return None
+    raise NoDerivedDeserializer().add_trace(annotated_type)
+
+
+def get_typeddict_deserializer(
+    typeddict: _TypedDictMeta, known_type_deserializers: Dict[str, Deserializer]
+) -> Deserializer:
+    total = typeddict.__total__
+    if not total:
+        # they can inject any key as the semantic of total
+        raise NoDerivedDeserializer().add_trace(
+            typeddict.__name__, "is not a total TypedDict"
+        )
+
+    field2deserializer = {}
+
+    def deserialize_typed_dict(value):
+        if not isinstance(value, dict):
+            raise ValueError("expect dictionary but get {value}")
+        output = {}
+        for field, func in field2deserializer.items():
+            if field not in value:
+                raise ValueError(f"expect field {field} but it's missing")
+            output[field] = func(value[field])
+        return output
+
+    # assign first to support recursive type in the field
+    known_type_deserializers[typeddict] = deserialize_typed_dict
+
+    for field, field_type in typeddict.__annotations__.items():
+        try:
+            func = get_deserializer_from_type(field_type, known_type_deserializers)
+        except NoDerivedDeserializer as e:
+            del known_type_deserializers[typeddict]
+            raise e.add_trace(field)
+        field2deserializer[field] = func
+
+    return deserialize_typed_dict
 
 
 def get_dataclass_deserializer(
     CLS, known_type_deserializers: Dict[Any, Deserializer]
-) -> Optional[Deserializer]:
+) -> Deserializer:
     # extract deserialize for each field
     field2deserializer: Dict[str, Deserializer] = {}
     field2optional: Dict[str, bool] = {}
@@ -332,11 +369,13 @@ def get_dataclass_deserializer(
 
     for field in fields(CLS):
         field_type = field_types[field.name]
-        func = get_deserializer_from_type(field_type, known_type_deserializers)
-        if func is None:
+        try:
+            func = get_deserializer_from_type(field_type, known_type_deserializers)
+        except NoDerivedDeserializer as e:
             # can't automatically figure out its child deserializer
             del known_type_deserializers[CLS]
-            return None
+            raise e.add_trace(CLS.__qualname__, field.name)
+
         field2deserializer[field.name] = func
         field2optional[field.name] = get_origin(field_type) is Union and type(
             None

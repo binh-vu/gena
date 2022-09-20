@@ -5,7 +5,7 @@ from functools import partial
 from typing import Mapping, Type, Callable, Any, List, Optional, Dict
 
 from flask import Blueprint, json, request, jsonify
-from gena.deserializer import generate_deserializer
+from gena.deserializer import generate_deserializer, NoDerivedDeserializer
 from peewee import Model as PeeweeModel, DoesNotExist, fn
 from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound
@@ -35,11 +35,19 @@ def generate_api(
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by", "group_by"}
     field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
 
-    if deserializers is None:
-        deserializers = generate_deserializer(Model)
-    elif len(set(name2field.keys()).difference(deserializers.keys())) > 0:
+    if (
+        deserializers is None
+        or len(set(name2field.keys()).difference(deserializers.keys())) > 0
+    ):
+        if deserializers is None:
+            deserializers = {}
+
         # automatically filling missing deserializers
-        deserializers.update(**generate_deserializer(Model))
+        deserializers.update(
+            **generate_deserializer(
+                Model, known_field_deserializers=set(deserializers.keys())
+            )
+        )
 
     if len(set(name2field.keys()).difference(deserializers.keys())) > 0:
         raise Exception(
@@ -52,7 +60,6 @@ def generate_api(
         elif batch_serialize is not None:
             serialize = lambda x: batch_serialize([x])[0]
         else:
-            # serialize = partial(model_to_dict, recurse=False)
             serialize = get_peewee_serializer(Model)
 
     if batch_serialize is None:

@@ -52,7 +52,7 @@ class NoDerivedSerializer(Exception):
         return self
 
     def __str__(self) -> str:
-        return f"cannot derive serializer for type: {list(reversed(self.error_trace))}"
+        return f"cannot derive serializer for: {list(reversed(self.error_trace))}"
 
 
 def datetime_serializer(value: Optional[datetime]):
@@ -155,7 +155,7 @@ def get_serializer_from_type(
 
     if origin is None or len(args) == 0:
         # we can't handle this type, e.g., some class that are not dataclass, or simply just list or set (not enough information)
-        raise NoDerivedSerializer(origin)
+        raise NoDerivedSerializer().add_trace(annotated_type)
 
     # handle literal first
     if origin is Literal:
@@ -181,7 +181,7 @@ def get_serializer_from_type(
             ],
         )
 
-    raise NoDerivedSerializer(annotated_type)
+    raise NoDerivedSerializer().add_trace(annotated_type)
 
 
 def get_dataclass_serializer(
@@ -226,7 +226,9 @@ def get_typeddict_serializer(
     total = typeddict.__total__
     if not total:
         # they can inject any key as the semantic of total, so we do not have serializer for this.
-        raise NoDerivedSerializer(typeddict.__name__, "is not a total TypedDict")
+        raise NoDerivedSerializer().add_trace(
+            typeddict.__name__, "is not a total TypedDict"
+        )
 
     field2deserializer = {}
 
