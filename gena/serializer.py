@@ -66,6 +66,7 @@ Serializer = Callable[[Any], Any]
 default_known_type_serializer = {
     datetime: datetime_serializer,
 }
+NoneType = type(None)
 
 
 def get_peewee_serializer(
@@ -142,7 +143,7 @@ def get_serializer_from_type(
 ) -> Optional[Serializer]:
     if annotated_type in known_type_serializer:
         return known_type_serializer[annotated_type]
-    if annotated_type in (str, int, float, bool):
+    if annotated_type in (str, int, float, bool, NoneType):
         return None
     if is_dataclass(annotated_type):
         return get_dataclass_serializer(annotated_type, known_type_serializer)
@@ -161,7 +162,11 @@ def get_serializer_from_type(
     if origin is Literal:
         return None
 
-    if origin is list or origin is set:
+    if (
+        origin is list
+        or origin is set
+        or (origin is tuple and len(args) == 2 and args[1] is Ellipsis)
+    ):
         ser_arg = get_serializer_from_type(args[0], known_type_serializer)
         if ser_arg is None:
             return None

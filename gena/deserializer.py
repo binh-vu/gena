@@ -193,6 +193,15 @@ def get_deserialize_list(deserialize_item: Deserializer):
     return deserialize_list
 
 
+def get_deserialize_homogeneous_tuple(deserialize_item: Deserializer):
+    def deserialize_tuple(value):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError(f"expect list/tuple but get {type(value)}")
+        return tuple(deserialize_item(item) for item in value)
+
+    return deserialize_tuple
+
+
 def get_deserialize_set(deserialize_item: Deserializer):
     def deserialize_set(value):
         if not isinstance(value, set):
@@ -252,6 +261,17 @@ def get_deserializer_from_type(
             return value
 
         return deserialize_literal
+
+    # handle a special case of variable-length tuple of homogeneous type
+    # https://docs.python.org/3/library/typing.html#typing.Tuple
+    if origin is tuple and len(args) > 1 and args[-1] is Ellipsis:
+        if len(args) != 2:
+            raise Exception(
+                "invalid annotation of variable-length tuple of homogeneous type. expect one type and ellipsis"
+            )
+        return get_deserialize_homogeneous_tuple(
+            get_deserializer_from_type(args[0], known_type_deserializers)
+        )
 
     arg_desers = [
         get_deserializer_from_type(arg, known_type_deserializers) for arg in args

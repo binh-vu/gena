@@ -10,7 +10,7 @@ from peewee import Model as PeeweeModel, DoesNotExist, fn
 from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound
 
-from gena.serializer import get_peewee_serializer
+from gena.serializer import Serializer, get_peewee_serializer
 
 
 def generate_api(
@@ -18,6 +18,7 @@ def generate_api(
     deserializers: Optional[Dict[str, Callable[[Any], Any]]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
+    known_type_serializer: Optional[Dict[Any, Serializer]] = None,
     enable_truncate_table: bool = False,
 ):
     """Generate API from the given Model
@@ -25,8 +26,9 @@ def generate_api(
     Args:
         Model: peewee model of the table
         deserializers: deserialize raw value, throw value error if value is invalid. you can provide deserializer for some field and the rest is going to be generated automatically
-        serialize:
-        batch_serialize:
+        serialize: function to serialize a record of the table
+        batch_serialize: function to serialize multiple records of the table
+        known_type_serializer: serializer for known type, only affected if serialize is generated automatically
         enable_truncate_table: whether to enable API to truncate the whole table
     """
     table_name = Model._meta.table_name
@@ -60,7 +62,9 @@ def generate_api(
         elif batch_serialize is not None:
             serialize = lambda x: batch_serialize([x])[0]
         else:
-            serialize = get_peewee_serializer(Model)
+            serialize = get_peewee_serializer(
+                Model, known_type_serializer=known_type_serializer
+            )
 
     if batch_serialize is None:
         assert serialize is not None
@@ -73,15 +77,31 @@ def generate_api(
     @bp.route(f"/{table_name}", methods=["GET"])
     def get():
         """Retrieving records matched a query.
+
+        There are fixed keyword arguments:
+            - limit: limit the number of records returned
+            - offset: offset of the records returned
+            - sorted_by: comma separated list of field name to sort by, prefix a field with "-" to sort that field in descending order.
+            - group_by: comma separated list of field name to group by.
+            - fields: comma separated list of field name to return. If not specified, all fields are returned.
+
+        To filter records, you can apply the condition of a column by <field>=<value> (equal condition).
         Condition on a field such as >, >=, <, <=, `max`, `min`, `in` can be specified using brackets such as: <field>[gt]=10.
         We also support complex conditions:
             1. `max`: keep the record in a group that has the largest value
             2. `min`: keep the record in a group that has the smallest value
             3. `in`: select record that its values are in the given list
 
-        We can support another aggregation to select keep all values in a group. However, since each value is for each record, we also have multiple ids. Therefore, a natural choice is to use `group_by` operator instead. Note that when you use group_by, the output is still a table (not a mapping) so that the client can reuse the code that read the data, but they have to group the result themselves.
+        The syntax for `max` and `min` are <field>[op]=<fields>, where op is either `max` or `min` and fields is a comma separated
+        list of fields that will be used to group the records.
 
-        Note that we enforce the constraint that only one aggregation (`max`, `min`, `group_by`, etc) is allow in a query to ensure the behaviour of the query is deterministic (e.g., apply a group_by and max, which one is apply first?).
+        We can support another aggregation to select keep all values in a group. However, since each value is for each
+        record, we also have multiple ids. Therefore, a natural choice is to use `group_by` operator instead. Note that
+        when you use group_by, the output is still a table (not a mapping) so that the client can reuse the code that
+        read the data, but they have to group the result themselves.
+
+        Note that we enforce the constraint that only one aggregation (`max`, `min`, `group_by`, etc) is allow in a query
+        to ensure the behaviour of the query is deterministic (e.g., apply a group_by and max, which one is apply first?).
         """
         if "fields" in request.args:
             field_names = request.args["fields"].split(",")

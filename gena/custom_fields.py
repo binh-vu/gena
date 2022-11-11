@@ -1,8 +1,8 @@
+from __future__ import annotations
 import orjson
-from abc import ABC, abstractclassmethod, abstractstaticmethod
-from typing import List, Optional, Type
+from typing import Type
 from peewee import Field
-from dataclasses import astuple, dataclass, fields
+from dataclasses import astuple
 
 
 # db_null = b"null"
