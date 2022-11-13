@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import (
     Any,
     Callable,
@@ -240,6 +241,12 @@ def get_deserializer_from_type(
     if isinstance(annotated_type, _TypedDictMeta):
         # is_typeddict is not supported at python 3.8 yet
         return get_typeddict_deserializer(annotated_type, known_type_deserializers)
+    try:
+        if issubclass(annotated_type, Enum):
+            # enum can be reconstructed using its constructor.
+            return annotated_type
+    except TypeError:
+        pass
 
     args = get_args(annotated_type)
     origin = get_origin(annotated_type)
