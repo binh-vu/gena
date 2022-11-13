@@ -1,4 +1,5 @@
-from typing import List, Tuple, Type
+from __future__ import annotations
+from typing import Type
 from flask import Flask
 from flask.testing import FlaskClient
 import pytest
@@ -22,15 +23,23 @@ class APITestSuite:
         raise NotImplementedError()
 
     @pytest.fixture(scope="session")
-    def existed_resources(self) -> List[Tuple[Model, dict]]:
+    def existed_resources(self) -> list[tuple[Model, dict]]:
         """Return a list of resources that already exist in the database (does not have to be exhaustive)"""
         raise NotImplementedError()
+
+    @pytest.fixture(scope="session")
+    def new_resources(self) -> list[dict]:
+        """Return a list of new resources to be created"""
+        raise NotImplementedError()
+
+    def get_api_prefix(self, model: Type[Model]) -> str:
+        return f"/api/{model._meta.table_name}"
 
     def test_get(
         self,
         client: FlaskClient,
         model: Type[Model],
-        existed_resources: List[Tuple[Model, dict]],
+        existed_resources: list[tuple[Model, dict]],
     ):
         # test getting the existed resources.
         # Note: the existed resources must be within top 100
@@ -45,5 +54,9 @@ class APITestSuite:
             assert rid in returned_resources
             assert returned_resources[rid] == resource_json
 
-    def get_api_prefix(self, model: Type[Model]) -> str:
-        return f"/api/{model._meta.table_name}"
+    def test_create(
+        self, client: FlaskClient, model: Type[Model], new_resources: list[dict]
+    ):
+        for new_resource in new_resources:
+            resp = client.post(self.get_api_prefix(model), json=new_resource)
+            assert resp.status_code == 200

@@ -1,5 +1,7 @@
 from dataclasses import fields, is_dataclass
 from datetime import datetime
+from enum import Enum
+from operator import attrgetter
 from typing import (
     Any,
     Callable,
@@ -151,6 +153,12 @@ def get_serializer_from_type(
         # is_typeddict is not supported at python 3.8 yet
         return get_typeddict_serializer(annotated_type, known_type_serializer)
 
+    try:
+        if issubclass(annotated_type, Enum):
+            return attrgetter("value")
+    except TypeError:
+        pass
+
     origin = get_origin(annotated_type)
     args = get_args(annotated_type)
 
@@ -281,12 +289,20 @@ def get_serialize_dict(serializer):
 
 
 def get_serialize_union(classes, serializers):
+    if all(ser is None for ser in serializers):
+        return None
+
     def serialize_union(value):
         if value is None:
             return None
         for cls, serializer in zip(classes, serializers):
-            if isinstance(value, cls):
-                return serializer(value)
-        raise ValueError(f"Cannot serialize {value}")
+            try:
+                if isinstance(value, cls):
+                    return serializer(value)
+            except:
+                raise
+        raise ValueError(
+            f"Cannot serialize {value} which is instance of either of {classes}"
+        )
 
     return serialize_union
