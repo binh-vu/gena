@@ -1,15 +1,15 @@
-import { observable, action, runInAction, makeObservable } from "mobx";
-import { CRUDStore } from "./CRUDStore";
-import { StoreState } from "./RStore";
 import axios, { AxiosError } from "axios";
+import { action, makeObservable, observable, runInAction } from "mobx";
+import { CRUDStore } from "./CRUDStore";
 import { DraftUpdateJunctionRecord, JunctionRecord, Record } from "./Record";
+import { StoreState } from "./RStore";
 
 type R<JID extends string | number> = { links: Set<JID>; fetchedAll: boolean };
 
 class ForeignKeyTable<
   JID extends string | number,
   AID extends string | number
-  > {
+> {
   public data: Map<AID, R<JID>> = new Map();
 
   constructor() {
@@ -18,8 +18,8 @@ class ForeignKeyTable<
       deleteAll: action,
       setFetchedAll: action,
       addOne: action,
-      deleteOne: action
-    })
+      deleteOne: action,
+    });
   }
 
   get(aid: AID): R<JID> | undefined {
@@ -76,7 +76,7 @@ export abstract class CRUDJunctionStore<
   B extends Record<BID>,
   AS extends CRUDStore<AID, any, any, A>,
   BS extends CRUDStore<BID, any, any, B>
-  > {
+> {
   state: StoreState = new StoreState();
 
   records: Map<JID, J> = new Map();
@@ -89,7 +89,7 @@ export abstract class CRUDJunctionStore<
   protected storeA: AS;
   protected storeB: BS;
 
-  public ajaxErrorHandler: (error: AxiosError<any>) => void = () => { };
+  public ajaxErrorHandler: (error: AxiosError<any>) => void = () => {};
 
   constructor(
     storeA: AS,
@@ -120,8 +120,8 @@ export abstract class CRUDJunctionStore<
       fetchByAIDAndBIDs: action,
       fetchByAIDsAndBID: action,
       fetchBByAID: action,
-      fetchAByBID: action
-    })
+      fetchAByBID: action,
+    });
   }
 
   public onDeleteCascadeTableA(aid: AID) {
@@ -254,7 +254,7 @@ export abstract class CRUDJunctionStore<
       return runInAction(() => {
         let result = [];
 
-        for (let item of resp.data) {
+        for (let item of resp.data.items) {
           if (item[this.fieldA] !== undefined) {
             this.storeA.set(this.storeA.deserialize(item[this.fieldA]));
           }
@@ -292,7 +292,7 @@ export abstract class CRUDJunctionStore<
       return runInAction(() => {
         let result = [];
 
-        for (let item of resp.data) {
+        for (let item of resp.data.items) {
           if (item[this.fieldA] !== undefined) {
             this.storeA.set(this.storeA.deserialize(item[this.fieldA]));
           }
@@ -330,7 +330,7 @@ export abstract class CRUDJunctionStore<
       return runInAction(() => {
         let result = [];
 
-        for (let item of resp.data) {
+        for (let item of resp.data.items) {
           if (item[this.fieldA] !== undefined) {
             this.storeA.set(this.storeA.deserialize(item[this.fieldA]));
           }
@@ -367,7 +367,7 @@ export abstract class CRUDJunctionStore<
       return runInAction(() => {
         let result = [];
 
-        for (let item of resp.data) {
+        for (let item of resp.data.items) {
           if (item[this.fieldA] !== undefined) {
             this.storeA.set(this.storeA.deserialize(item[this.fieldA]));
           }
