@@ -1,16 +1,25 @@
 from collections import defaultdict
-from curses import raw
+from enum import Enum
 import re
-from functools import partial
 from typing import Mapping, Type, Callable, Any, List, Optional, Dict
 
-from flask import Blueprint, json, request, jsonify
-from gena.deserializer import generate_deserializer, NoDerivedDeserializer
+from flask import Blueprint, request, jsonify
+from gena.deserializer import generate_deserializer
 from peewee import Model as PeeweeModel, DoesNotExist, fn
-from playhouse.shortcuts import model_to_dict
 from werkzeug.exceptions import BadRequest, NotFound
 
 from gena.serializer import Serializer, get_peewee_serializer
+
+
+class APIFuncs(str, Enum):
+    get = "get"
+    get_by_ids = "get_by_ids"
+    get_one = "get_one"
+    has = "has"
+    create = "create"
+    update = "update"
+    delete_by_id = "delete_by_id"
+    truncate = "truncate"
 
 
 def generate_api(
@@ -20,6 +29,7 @@ def generate_api(
     batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
     known_type_serializer: Optional[Dict[Any, Serializer]] = None,
     enable_truncate_table: bool = False,
+    skip_funcs: Optional[set[APIFuncs]] = None,
 ):
     """Generate API from the given Model
 
@@ -29,8 +39,14 @@ def generate_api(
         serialize: function to serialize a record of the table
         batch_serialize: function to serialize multiple records of the table
         known_type_serializer: serializer for known type, only affected if serialize is generated automatically
-        enable_truncate_table: whether to enable API to truncate the whole table
+        enable_truncate_table: whether to enable API to truncate the whole table. Note: deprecated, use skip_funcs instead
+        skip_funcs: list of APIFuncs to skip, default is [truncate]
     """
+    if skip_funcs is None:
+        skip_funcs = set()
+    if not enable_truncate_table and APIFuncs.truncate not in skip_funcs:
+        skip_funcs.add(APIFuncs.truncate)
+
     table_name = Model._meta.table_name
     default_limit = str(50)
     name2field = {name: field for name, field in Model._meta.fields.items()}
@@ -74,7 +90,6 @@ def generate_api(
 
     bp = Blueprint(table_name, table_name)
 
-    @bp.route(f"/{table_name}", methods=["GET"])
     def get():
         """Retrieving records matched a query.
 
@@ -255,7 +270,9 @@ def generate_api(
 
         return jsonify({"items": items, "total": total})
 
-    @bp.route(f"/{table_name}/find_by_ids", methods=["POST"])
+    if APIFuncs.get not in skip_funcs:
+        bp.route(f"/{table_name}", methods=["GET"])(get)
+
     def get_by_ids():
         if "ids" not in request.json:
             raise BadRequest("Bad request. Missing `ids`")
@@ -279,7 +296,9 @@ def generate_api(
 
         return jsonify({"items": records, "total": len(records)})
 
-    @bp.route(f"/{table_name}/<id>", methods=["GET"])
+    if APIFuncs.get_by_ids not in skip_funcs:
+        bp.route(f"/{table_name}/find_by_ids", methods=["POST"])(get_by_ids)
+
     def get_one(id):
         if "fields" in request.args:
             field_names = request.args["fields"].split(",")
@@ -298,13 +317,17 @@ def generate_api(
 
         return jsonify(record)
 
-    @bp.route(f"/{table_name}/<id>", methods=["HEAD"])
+    if APIFuncs.get_one not in skip_funcs:
+        bp.route(f"/{table_name}/<id>", methods=["GET"])(get_one)
+
     def has(id):
         if not Model.select().where(Model.id == id).exists():
             raise NotFound(f"Record {id} does not exist")
         return jsonify()
 
-    @bp.route(f"/{table_name}", methods=["POST"])
+    if APIFuncs.has not in skip_funcs:
+        bp.route(f"/{table_name}/<id>", methods=["HEAD"])(has)
+
     def create():
         posted_record = request.json
         raw_record = {}
@@ -322,7 +345,9 @@ def generate_api(
         # TODO: correct return types according to RESTful specification https://restfulapi.net/http-methods/
         return jsonify(serialize(record))
 
-    @bp.route(f"/{table_name}/<id>", methods=["PUT"])
+    if APIFuncs.create not in skip_funcs:
+        bp.route(f"/{table_name}", methods=["POST"])(create)
+
     def update(id):
         try:
             record = Model.get_by_id(id)
@@ -345,7 +370,9 @@ def generate_api(
 
         return jsonify(serialize(record))
 
-    @bp.route(f"/{table_name}/<id>", methods=["DELETE"])
+    if APIFuncs.update not in skip_funcs:
+        bp.route(f"/{table_name}/<id>", methods=["PUT"])(update)
+
     def delete_by_id(id):
         try:
             Model.get_by_id(id).delete_instance()
@@ -354,12 +381,15 @@ def generate_api(
 
         return jsonify({"status": "success"})
 
-    if enable_truncate_table:
+    if APIFuncs.delete_by_id not in skip_funcs:
+        bp.route(f"/{table_name}/<id>", methods=["DELETE"])(delete_by_id)
 
-        @bp.route(f"/{table_name}", methods=["DELETE"])
-        def truncate():
-            Model.truncate_table()
-            return jsonify({"status": "success"})
+    def truncate():
+        Model.truncate_table()
+        return jsonify({"status": "success"})
+
+    if APIFuncs.truncate not in skip_funcs:
+        bp.route(f"/{table_name}", methods=["DELETE"])(truncate)
 
     return bp
 

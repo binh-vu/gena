@@ -20,10 +20,15 @@ class DataClassField(Field):
         else:
             self.from_tuple = lambda x: CLS(*x)  # type: ignore
 
+        if hasattr(CLS, "to_tuple"):
+            self.to_tuple = getattr(CLS, "to_tuple")
+        else:
+            self.to_tuple = astuple
+
     def db_value(self, value):
         if value is None:
             return value
-        return orjson.dumps(astuple(value))
+        return orjson.dumps(self.to_tuple(value))
 
     def python_value(self, value):
         if value == db_null:
@@ -34,7 +39,7 @@ class DataClassField(Field):
 
 class ListDataClassField(DataClassField):
     def db_value(self, value):
-        return orjson.dumps([astuple(item) for item in value])
+        return orjson.dumps([self.to_tuple(item) for item in value])
 
     def python_value(self, value):
         if value == db_null:
@@ -46,7 +51,7 @@ class ListDataClassField(DataClassField):
 
 class DictDataClassField(DataClassField):
     def db_value(self, value):
-        return orjson.dumps({k: astuple(item) for k, item in value.items()})
+        return orjson.dumps({k: self.to_tuple(item) for k, item in value.items()})
 
     def python_value(self, value):
         if value == db_null:
@@ -60,7 +65,7 @@ class Dict2ListDataClassField(DataClassField):
     def db_value(self, value):
         try:
             return orjson.dumps(
-                {k: [astuple(item) for item in lst] for k, lst in value.items()}
+                {k: [self.to_tuple(item) for item in lst] for k, lst in value.items()}
             )
         except:
             print(value)
