@@ -105,6 +105,7 @@ def generate_deserializer(
                 func = deserialize_int
             else:
                 raise NoDerivedDeserializer().add_trace(Model.__qualname__, name)
+            output[f"{name}_id"] = func
         elif isinstance(field, DataClassField):
             func = get_dataclass_deserializer(field.CLS, known_type_deserializers)
             if type(field) is ListDataClassField:

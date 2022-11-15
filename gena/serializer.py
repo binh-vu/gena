@@ -2,11 +2,11 @@ from dataclasses import fields, is_dataclass
 from datetime import datetime
 from enum import Enum
 from operator import attrgetter
+from typing import _TypedDictMeta  # type: ignore
 from typing import (
     Any,
     Callable,
     Dict,
-    List,
     Literal,
     Optional,
     Set,
@@ -15,33 +15,28 @@ from typing import (
     get_args,
     get_origin,
     get_type_hints,
-    _TypedDictMeta,  # type: ignore
 )
-from loguru import logger
-import orjson
+
+from gena.config import GenaConfig
 from gena.custom_fields import (
     DataClassField,
     Dict2ListDataClassField,
     DictDataClassField,
     ListDataClassField,
 )
+from gena.deserializer import get_deserialize_dict
+from loguru import logger
 from peewee import (
-    CharField,
-    Model,
-    Field,
+    BooleanField,
+    DateField,
+    DateTimeField,
     FloatField,
     ForeignKeyField,
     IntegerField,
-    BooleanField,
-    _StringField,
-    DateField,
-    DateTimeField,
+    Model,
     TimestampField,
-    TextField,
-    Value,
+    _StringField,
 )
-
-from gena.deserializer import get_deserialize_dict
 
 
 class NoDerivedSerializer(Exception):
@@ -69,6 +64,7 @@ default_known_type_serializer = {
     datetime: datetime_serializer,
 }
 NoneType = type(None)
+genaconfig = GenaConfig.get_instance()
 
 
 def get_peewee_serializer(
@@ -100,7 +96,10 @@ def get_peewee_serializer(
         elif isinstance(field, ForeignKeyField):
             # handle foreign key separately to avoid extra query whenever we use the
             # proxy object
-            foreign_keys.append([name, f"{name}_id"])
+            if genaconfig.SERIALIZE_FOREIGN_KEY_FIELD_NAME == "db_field":
+                foreign_keys.append([f"{name}_id", f"{name}_id"])
+            else:
+                foreign_keys.append([name, f"{name}_id"])
             continue
         elif isinstance(field, DataClassField):
             try:
@@ -302,7 +301,7 @@ def get_serialize_union(classes, serializers):
             except:
                 raise
         raise ValueError(
-            f"Cannot serialize {value} which is instance of either of {classes}"
+            f"Cannot serialize {value} which is not instance of one of {classes}"
         )
 
     return serialize_union

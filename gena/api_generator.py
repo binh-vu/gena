@@ -5,7 +5,7 @@ from typing import Mapping, Type, Callable, Any, List, Optional, Dict
 
 from flask import Blueprint, request, jsonify
 from gena.deserializer import generate_deserializer
-from peewee import Model as PeeweeModel, DoesNotExist, fn
+from peewee import ForeignKeyField, Model as PeeweeModel, DoesNotExist, fn
 from werkzeug.exceptions import BadRequest, NotFound
 
 from gena.serializer import Serializer, get_peewee_serializer
@@ -50,6 +50,12 @@ def generate_api(
     table_name = Model._meta.table_name
     default_limit = str(50)
     name2field = {name: field for name, field in Model._meta.fields.items()}
+    name2field = {}
+    for name, field in Model._meta.fields.items():
+        name2field[name] = field
+        if isinstance(field, ForeignKeyField):
+            name2field[name + "_id"] = field
+
     op_fields = {"fields", "limit", "offset", "unique", "sorted_by", "group_by"}
     field_reg = re.compile(r"(?P<name>[a-zA-Z_0-9]+)(?:\[(?P<op>[a-zA-Z0-9]+)\])?")
 
@@ -281,11 +287,12 @@ def generate_api(
         if "fields" in request.args:
             field_names = request.args["fields"].split(",")
             fields = [name2field[name] for name in field_names]
+            query = Model.select(Model.id, *fields)
         else:
             field_names = []
-            fields = []
+            query = Model.select()
 
-        records = list(Model.select(Model.id, *fields).where(Model.id.in_(ids)))
+        records = list(query.where(Model.id.in_(ids)))
         records = batch_serialize(records)
 
         if len(field_names) > 0:
