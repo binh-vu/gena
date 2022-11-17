@@ -183,7 +183,7 @@ def get_serializer_from_type(
         ser_value = get_serializer_from_type(args[1], known_type_serializer)
         if ser_value is None:
             return None
-        return get_deserialize_dict(ser_value)
+        return get_serialize_dict(ser_value)
 
     if origin is Union:
         return get_serialize_union(

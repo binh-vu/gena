@@ -28,7 +28,7 @@ class DataClassField(Field):
     def db_value(self, value):
         if value is None:
             return value
-        return orjson.dumps(self.to_tuple(value))
+        return orjson.dumps(self.to_tuple(value), option=orjson.OPT_NON_STR_KEYS)
 
     def python_value(self, value):
         if value == db_null:
@@ -39,7 +39,9 @@ class DataClassField(Field):
 
 class ListDataClassField(DataClassField):
     def db_value(self, value):
-        return orjson.dumps([self.to_tuple(item) for item in value])
+        return orjson.dumps(
+            [self.to_tuple(item) for item in value], option=orjson.OPT_NON_STR_KEYS
+        )
 
     def python_value(self, value):
         if value == db_null:
@@ -51,7 +53,10 @@ class ListDataClassField(DataClassField):
 
 class DictDataClassField(DataClassField):
     def db_value(self, value):
-        return orjson.dumps({k: self.to_tuple(item) for k, item in value.items()})
+        return orjson.dumps(
+            {k: self.to_tuple(item) for k, item in value.items()},
+            option=orjson.OPT_NON_STR_KEYS,
+        )
 
     def python_value(self, value):
         if value == db_null:
@@ -65,7 +70,8 @@ class Dict2ListDataClassField(DataClassField):
     def db_value(self, value):
         try:
             return orjson.dumps(
-                {k: [self.to_tuple(item) for item in lst] for k, lst in value.items()}
+                {k: [self.to_tuple(item) for item in lst] for k, lst in value.items()},
+                option=orjson.OPT_NON_STR_KEYS,
             )
         except:
             print(value)

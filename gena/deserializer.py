@@ -213,11 +213,11 @@ def get_deserialize_set(deserialize_item: Deserializer):
     return deserialize_set
 
 
-def get_deserialize_dict(deserialize_item: Deserializer):
+def get_deserialize_dict(deserialize_key: Deserializer, deserialize_item: Deserializer):
     def deserialize_dict(value):
         if not isinstance(value, dict):
             raise ValueError(f"expect dict but get {type(value)}")
-        return {k: deserialize_item(item) for k, item in value.items()}
+        return {deserialize_key(k): deserialize_item(item) for k, item in value.items()}
 
     return deserialize_dict
 
@@ -326,7 +326,7 @@ def get_deserializer_from_type(
         return get_deserialize_set(deserialize_args)
 
     if origin is dict:
-        return get_deserialize_dict(deserialize_args)
+        return get_deserialize_dict(arg_desers[0], arg_desers[1])
 
     if origin is Union:
         return deserialize_args
