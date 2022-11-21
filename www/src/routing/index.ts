@@ -1,6 +1,6 @@
 import { Location } from "history";
 import { matchPath } from "react-router";
-import { PathDef, ReactComponent, ArgType } from "./route";
+import { PathDef, ReactComponent, ArgType, ArgSchema } from "./route";
 export { ExternalLink, InternalHTMLLink, InternalLink } from "./Link";
 export {
   history,
@@ -67,4 +67,4 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
   }
 }
 
-export type { ReactComponent, ArgType };
+export type { ReactComponent, ArgType, ArgSchema };
