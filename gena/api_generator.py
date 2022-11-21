@@ -37,7 +37,7 @@ def generate_api(
         Model: peewee model of the table
         deserializers: deserialize raw value, throw value error if value is invalid. you can provide deserializer for some field and the rest is going to be generated automatically
         serialize: function to serialize a record of the table
-        batch_serialize: function to serialize multiple records of the table
+        batch_serialize: function to serialize multiple records of the table to send to client
         known_type_serializer: serializer for known type, only affected if serialize is generated automatically
         enable_truncate_table: whether to enable API to truncate the whole table. Note: deprecated, use skip_funcs instead
         skip_funcs: list of APIFuncs to skip, default is [truncate]
