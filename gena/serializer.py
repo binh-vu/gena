@@ -179,6 +179,14 @@ def get_serializer_from_type(
             return None
         return get_serialize_sequence(ser_arg)
 
+    if origin is tuple:
+        ser_args = [
+            get_serializer_from_type(arg, known_type_serializer) for arg in args
+        ]
+        if any(ser_arg is None for ser_arg in ser_args):
+            return None
+        return get_serialize_tuple(ser_args)
+
     if origin is dict:
         ser_value = get_serializer_from_type(args[1], known_type_serializer)
         if ser_value is None:
@@ -197,7 +205,9 @@ def get_serializer_from_type(
 
 
 def get_dataclass_serializer(
-    CLS, known_type_serializer: Dict[str, Serializer]
+    CLS,
+    known_type_serializer: Optional[Dict[str, Serializer]] = None,
+    known_field_serializer: Optional[Dict[str, Serializer]] = None,
 ) -> Serializer:
     field2serializer: Dict[str, Optional[Serializer]] = {}
     field_types = get_type_hints(CLS)
@@ -216,9 +226,15 @@ def get_dataclass_serializer(
         return output
 
     # assign first to support recursive type in the field
+    known_type_serializer = known_type_serializer or {}
     known_type_serializer[CLS] = serialize_dataclass
 
+    known_field_serializer = known_field_serializer or {}
+
     for field in fields(CLS):
+        if field.name in known_field_serializer:
+            field2serializer[field.name] = known_field_serializer[field.name]
+            continue
         field_type = field_types[field.name]
         try:
             func = get_serializer_from_type(field_type, known_type_serializer)
@@ -276,6 +292,17 @@ def get_serialize_sequence(serializer):
         return [serializer(item) for item in value]
 
     return serialize_list
+
+
+def get_serialize_tuple(arg_serializers):
+    def serialize_tuple(value):
+        if value is None:
+            return None
+        return tuple(
+            serializer(item) for serializer, item in zip(arg_serializers, value)
+        )
+
+    return serialize_tuple
 
 
 def get_serialize_dict(serializer):

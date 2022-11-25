@@ -32,7 +32,7 @@ from peewee import (
     TextField,
     Value,
 )
-from dataclasses import fields, is_dataclass
+from dataclasses import MISSING, fields, is_dataclass
 
 
 class NoDerivedDeserializer(Exception):
@@ -195,6 +195,19 @@ def get_deserialize_list(deserialize_item: Deserializer):
     return deserialize_list
 
 
+def get_deserialize_tuple(deserialize_items: list[Deserializer]):
+    def deserialize_tuple(value):
+        if not isinstance(value, list):
+            raise ValueError(f"expect list but get {type(value)}")
+        if len(value) != len(deserialize_items):
+            raise ValueError(
+                f"expect list of length {len(deserialize_items)} but get {len(value)}"
+            )
+        return tuple(deser(item) for deser, item in zip(deserialize_items, value))
+
+    return deserialize_tuple
+
+
 def get_deserialize_homogeneous_tuple(deserialize_item: Deserializer):
     def deserialize_tuple(value):
         if not isinstance(value, (list, tuple)):
@@ -319,6 +332,9 @@ def get_deserializer_from_type(
 
         deserialize_args = deserialize_n_args
 
+    if origin is tuple:
+        return get_deserialize_tuple(arg_desers)
+
     if origin is list:
         return get_deserialize_list(deserialize_args)
 
@@ -372,7 +388,9 @@ def get_typeddict_deserializer(
 
 
 def get_dataclass_deserializer(
-    CLS, known_type_deserializers: Dict[Any, Deserializer]
+    CLS,
+    known_type_deserializers: Optional[Dict[Any, Deserializer]] = None,
+    known_field_deserializers: Optional[Dict[str, Deserializer]] = None,
 ) -> Deserializer:
     # extract deserialize for each field
     field2deserializer: Dict[str, Deserializer] = {}
@@ -393,9 +411,17 @@ def get_dataclass_deserializer(
         return CLS(**output)
 
     # assign first to support recursive type in the field
+    known_type_deserializers = known_type_deserializers or {}
     known_type_deserializers[CLS] = deserialize_dataclass
+    known_field_deserializers = known_field_deserializers or {}
 
     for field in fields(CLS):
+        if field.name in known_field_deserializers:
+            field2deserializer[field.name] = known_field_deserializers[field.name]
+            field2optional[field.name] = (
+                field.default is not MISSING or field.default_factory is not MISSING
+            )
+            continue
         field_type = field_types[field.name]
         try:
             func = get_deserializer_from_type(field_type, known_type_deserializers)
@@ -405,9 +431,9 @@ def get_dataclass_deserializer(
             raise e.add_trace(CLS.__qualname__, field.name)
 
         field2deserializer[field.name] = func
-        field2optional[field.name] = get_origin(field_type) is Union and type(
-            None
-        ) in get_args(field_type)
+        field2optional[field.name] = (
+            field.default is not MISSING or field.default_factory is not MISSING
+        )
 
     return deserialize_dataclass
 
