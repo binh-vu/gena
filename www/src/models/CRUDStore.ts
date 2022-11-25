@@ -28,6 +28,7 @@ export abstract class CRUDStore<
 
   protected createAJAXParams = { URL: undefined as any, config: {} };
   protected onDeleteListeners: ((record: M) => void)[] = [];
+  protected onUpdateListeners: ((draft: U, record: M) => void)[] = [];
 
   /**
    * Constructor
@@ -66,6 +67,16 @@ export abstract class CRUDStore<
    */
   public addOnDeleteListener(listener: (record: M) => void) {
     this.onDeleteListeners.push(listener);
+  }
+
+  /**
+   * Add listeners when a record is updated. Note that the event is only fired
+   * if the record is not null (actually exist).
+   *
+   * @param listener
+   */
+  public addOnUpdateListener(listener: (draft: U, record: M) => void) {
+    this.onUpdateListeners.push(listener);
   }
 
   /**
@@ -124,6 +135,10 @@ export abstract class CRUDStore<
 
         this.records.set(record.id, record);
         this.index(record);
+
+        for (let listener of this.onUpdateListeners) {
+          listener(draft, record);
+        }
 
         if (discardDraft && this.updateDrafts.has(draft.id)) {
           this.updateDrafts.delete(draft.id);
