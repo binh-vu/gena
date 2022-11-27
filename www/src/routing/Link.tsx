@@ -13,13 +13,15 @@ export const InternalLink = <
 >(
   props: {
     path: PathDef<U, Q>;
+    openInNewPage?: boolean;
     urlArgs: ArgSchema<U>;
     queryArgs: ArgSchema<Q>;
   } & Omit<React.HTMLProps<HTMLAnchorElement>, "onClick">
 ) => {
-  const { path, urlArgs, queryArgs, children, ...restprops } = props;
+  const { path, urlArgs, queryArgs, children, openInNewPage, ...restprops } =
+    props;
   const onClick = (e: any) => {
-    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e);
+    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e, openInNewPage);
   };
 
   return (
