@@ -63,7 +63,6 @@ default_known_type_serializer = {
     datetime: datetime_serializer,
 }
 NoneType = type(None)
-genaconfig = GenaConfig.get_instance()
 
 
 def get_peewee_serializer(
@@ -74,6 +73,7 @@ def get_peewee_serializer(
     known_type_serializer = known_type_serializer or {}
     exclude_fields = exclude_fields or set()
     fields = Model._meta.fields
+    genaconfig = GenaConfig.get_instance()
 
     for k, v in default_known_type_serializer.items():
         if k not in known_type_serializer:
