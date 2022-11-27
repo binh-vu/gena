@@ -7,16 +7,22 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
       - name: setup python
         uses: actions/setup-python@v3
         with:
-          python-version: 3.8
+          python-version: ${{ matrix.python }}
       - name: install dependencies
         run: |
           pip install poetry
-          # poetry install
+          poetry lock --no-update
+          poetry install
+      - name: run test
+        run: poetry run pytest -xs tests/
       - name: build
         run: poetry build
       - name: upload backend dist
