@@ -59,4 +59,4 @@ class APITestSuite:
     ):
         for new_resource in new_resources:
             resp = client.post(self.get_api_prefix(model), json=new_resource)
-            assert resp.status_code == 200
+            assert resp.status_code == 200, resp.text
