@@ -1,16 +1,17 @@
+from __future__ import annotations
 import importlib
 import logging
 import os
 import pkgutil
 from modulefinder import Module
 from pathlib import Path
-from typing import Union, List
+from typing import Union
 
 from flask import Flask, render_template, Blueprint, send_from_directory
 
 
 def generate_app(
-    controllers: Union[List[Blueprint], Module],
+    controllers: Union[list[Blueprint], Module],
     pkg_dir: Union[str, Path],
     log_sql_queries: bool = True,
 ) -> Flask:

@@ -1,7 +1,8 @@
+from __future__ import annotations
 from collections import defaultdict
 from enum import Enum
 import re
-from typing import Mapping, Type, Callable, Any, List, Optional, Dict
+from typing import Mapping, Type, Callable, Any, Optional
 
 from flask import Blueprint, request, jsonify
 from gena.deserializer import generate_deserializer
@@ -24,10 +25,10 @@ class APIFuncs(str, Enum):
 
 def generate_api(
     Model: Type[PeeweeModel],
-    deserializers: Optional[Dict[str, Callable[[Any], Any]]] = None,
+    deserializers: Optional[dict[str, Callable[[Any], Any]]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
-    batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
-    known_type_serializer: Optional[Dict[Any, Serializer]] = None,
+    batch_serialize: Optional[Callable[[list[Any]], list[dict]]] = None,
+    known_type_serializer: Optional[dict[Any, Serializer]] = None,
     enable_truncate_table: bool = False,
     skip_funcs: Optional[set[APIFuncs]] = None,
 ):
@@ -404,9 +405,9 @@ def generate_api(
 def generate_readonly_api_4dict(
     name: str,
     id2ent: Mapping[str, Any],
-    unique_field_funcs: Dict[str, Callable[[str], str]] = None,
+    unique_field_funcs: dict[str, Callable[[str], str]] = None,
     serialize: Optional[Callable[[Any], dict]] = None,
-    batch_serialize: Optional[Callable[[List[Any]], List[dict]]] = None,
+    batch_serialize: Optional[Callable[[list[Any]], list[dict]]] = None,
 ):
     """Generate API for a dictionary.
 
@@ -507,7 +508,7 @@ def generate_readonly_api_4dict(
 
 def gen_batch_serialize(
     serialize: Callable[[Any], dict]
-) -> Callable[[List[Any]], List[dict]]:
+) -> Callable[[list[Any]], list[dict]]:
     def batch_serialize(lst):
         return [serialize(item) for item in lst]
 
