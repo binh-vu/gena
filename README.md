@@ -1,4 +1,4 @@
-# GENA
+# GENA &middot; [![PyPI](https://img.shields.io/pypi/v/gena)](https://pypi.org/project/gena) [![npm version](https://img.shields.io/npm/v/react.svg?style=flat)](https://www.npmjs.com/package/react)
 
 Framework to help to build (web) application faster.
 
