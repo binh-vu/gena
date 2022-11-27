@@ -4,7 +4,7 @@ import os
 import pkgutil
 from modulefinder import Module
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import Union, List
 
 from flask import Flask, render_template, Blueprint, send_from_directory
 

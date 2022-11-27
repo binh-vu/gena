@@ -24,7 +24,6 @@ from gena.custom_fields import (
     DictDataClassField,
     ListDataClassField,
 )
-from gena.deserializer import get_deserialize_dict
 from loguru import logger
 from peewee import (
     BooleanField,

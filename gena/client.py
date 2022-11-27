@@ -1,7 +1,6 @@
 import requests
-from typing import Type, Union
+from typing import Union
 
-from peewee import Model as PeeweeModel, DoesNotExist, fn
 from loguru import logger
 
 ID = Union[str, int]

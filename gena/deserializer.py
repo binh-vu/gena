@@ -1,12 +1,10 @@
+from __future__ import annotations
 from enum import Enum
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     Literal,
     Optional,
-    Set,
     Type,
     Union,
     get_args,
@@ -23,14 +21,12 @@ from gena.custom_fields import (
 from peewee import (
     CharField,
     Model,
-    Field,
     FloatField,
     ForeignKeyField,
     IntegerField,
     BooleanField,
     _StringField,
     TextField,
-    Value,
 )
 from dataclasses import MISSING, fields, is_dataclass
 
@@ -56,9 +52,9 @@ Deserializer = Callable[[Any], Any]
 
 def generate_deserializer(
     Model: Type[Model],
-    known_type_deserializers: Optional[Dict[Any, Deserializer]] = None,
-    known_field_deserializers: Optional[Set[str]] = None,
-) -> Dict[str, Deserializer]:
+    known_type_deserializers: Optional[dict[Any, Deserializer]] = None,
+    known_field_deserializers: Optional[set[str]] = None,
+) -> dict[str, Deserializer]:
     known_type_deserializers = known_type_deserializers or {}
     known_field_deserializers = known_field_deserializers or set()
 
@@ -236,7 +232,7 @@ def get_deserialize_dict(deserialize_key: Deserializer, deserialize_item: Deseri
 
 
 def get_deserializer_from_type(
-    annotated_type, known_type_deserializers: Dict[Any, Deserializer]
+    annotated_type, known_type_deserializers: dict[Any, Deserializer]
 ) -> Deserializer:
     if annotated_type in known_type_deserializers:
         return known_type_deserializers[annotated_type]
@@ -352,7 +348,7 @@ def get_deserializer_from_type(
 
 
 def get_typeddict_deserializer(
-    typeddict: _TypedDictMeta, known_type_deserializers: Dict[str, Deserializer]
+    typeddict: _TypedDictMeta, known_type_deserializers: dict[str, Deserializer]
 ) -> Deserializer:
     total = typeddict.__total__
     if not total:
@@ -389,12 +385,12 @@ def get_typeddict_deserializer(
 
 def get_dataclass_deserializer(
     CLS,
-    known_type_deserializers: Optional[Dict[Any, Deserializer]] = None,
-    known_field_deserializers: Optional[Dict[str, Deserializer]] = None,
+    known_type_deserializers: Optional[dict[Any, Deserializer]] = None,
+    known_field_deserializers: Optional[dict[str, Deserializer]] = None,
 ) -> Deserializer:
     # extract deserialize for each field
-    field2deserializer: Dict[str, Deserializer] = {}
-    field2optional: Dict[str, bool] = {}
+    field2deserializer: dict[str, Deserializer] = {}
+    field2optional: dict[str, bool] = {}
     field_types = get_type_hints(CLS)
 
     def deserialize_dataclass(value):
