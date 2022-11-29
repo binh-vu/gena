@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from enum import Enum
 from typing import (
     Any,
@@ -20,6 +21,7 @@ from gena.custom_fields import (
 )
 from peewee import (
     CharField,
+    DateTimeField,
     Model,
     FloatField,
     ForeignKeyField,
@@ -96,6 +98,8 @@ def generate_deserializer(
                     )
                 else:
                     func = deserialize_str
+        elif isinstance(field, DateTimeField):
+            func = deserialize_datetime
         elif isinstance(field, ForeignKeyField):
             if field.field_type.upper() == "INT":
                 func = deserialize_int
@@ -107,9 +111,11 @@ def generate_deserializer(
             if type(field) is ListDataClassField:
                 func = get_deserialize_list(func)
             elif type(field) is DictDataClassField:
-                func = get_deserialize_dict(func)
+                # key must be string because if they can't send non string key over json
+                func = get_deserialize_dict(deserialize_str, func)
             elif type(field) is Dict2ListDataClassField:
-                func = get_deserialize_dict(get_deserialize_list(func))
+                # key must be string because if they can't send non string key over json
+                func = get_deserialize_dict(deserialize_str, get_deserialize_list(func))
         else:
             raise NoDerivedDeserializer().add_trace(Model.__qualname__, name)
 
@@ -117,6 +123,15 @@ def generate_deserializer(
             func = get_deserialize_nullable(func)
         output[name] = func
     return output
+
+
+def deserialize_datetime(value):
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            raise ValueError(f"expect datetime in iso-format but get: {value}")
+    raise ValueError(f"expect a string but get: {type(value)}")
 
 
 def deserialize_int(value):
