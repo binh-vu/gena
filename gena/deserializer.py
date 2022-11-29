@@ -131,7 +131,18 @@ def deserialize_datetime(value):
             return datetime.fromisoformat(value)
         except ValueError:
             raise ValueError(f"expect datetime in iso-format but get: {value}")
-    raise ValueError(f"expect a string but get: {type(value)}")
+
+    if isinstance(value, int):
+        # expect a timestamp which is a number of milliseconds since epoch
+        try:
+            return datetime.utcfromtimestamp(value / 1000)
+        except ValueError:
+            raise ValueError(
+                f"expect a timestamp which is a number of milliseconds since epoch but get: {value}"
+            )
+    raise ValueError(
+        f"expect a string (isoformat) or timestamp (number of milliseconds since epoch) but get: {type(value)}"
+    )
 
 
 def deserialize_int(value):
