@@ -31,6 +31,7 @@ from peewee import (
     TextField,
 )
 from dataclasses import MISSING, fields, is_dataclass
+from dateutil.parser import parse as iso_parse
 
 
 class NoDerivedDeserializer(Exception):
@@ -128,7 +129,7 @@ def generate_deserializer(
 def deserialize_datetime(value):
     if isinstance(value, str):
         try:
-            return datetime.fromisoformat(value)
+            return iso_parse(value).replace(tzinfo=None)
         except ValueError:
             raise ValueError(f"expect datetime in iso-format but get: {value}")
 
