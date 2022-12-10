@@ -182,7 +182,7 @@ def get_serializer_from_type(
         ser_args = [
             get_serializer_from_type(arg, known_type_serializer) for arg in args
         ]
-        if any(ser_arg is None for ser_arg in ser_args):
+        if all(ser_arg is None for ser_arg in ser_args):
             return None
         return get_serialize_tuple(ser_args)
 
@@ -298,7 +298,8 @@ def get_serialize_tuple(arg_serializers):
         if value is None:
             return None
         return tuple(
-            serializer(item) for serializer, item in zip(arg_serializers, value)
+            serializer(item) if serializer is not None else item
+            for serializer, item in zip(arg_serializers, value)
         )
 
     return serialize_tuple
