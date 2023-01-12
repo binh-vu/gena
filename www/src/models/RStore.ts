@@ -34,6 +34,12 @@ export class StoreState {
   }
 }
 
+/**
+ * For each field, you can either choose to filter by exact value matching (typeof string, number, boolean),
+ * or choose to be max of a group (records are grouped by multiple fields in the value (hence value is (keyof R)[])),
+ * or choose to be greater, less than (gt, lt, gte, lte) than a value (number only), or choose to be in an array of
+ * values (string[] or number[])
+ */
 export type QueryConditions<R> = Partial<
   Record<
     keyof R,
