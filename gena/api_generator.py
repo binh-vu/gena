@@ -1,15 +1,19 @@
 from __future__ import annotations
+
+import re
 from collections import defaultdict
 from enum import Enum
-import re
-from typing import Mapping, Type, Callable, Any, Optional
+from typing import Any, Callable, Mapping, Optional, Type, TypeVar
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from gena.deserializer import generate_deserializer
-from peewee import ForeignKeyField, Model as PeeweeModel, DoesNotExist, fn
+from gena.serializer import Serializer, get_peewee_serializer
+from peewee import DoesNotExist, ForeignKeyField
+from peewee import Model as PeeweeModel
+from peewee import fn
 from werkzeug.exceptions import BadRequest, NotFound
 
-from gena.serializer import Serializer, get_peewee_serializer
+T = TypeVar("T")
 
 
 class APIFuncs(str, Enum):
@@ -404,10 +408,10 @@ def generate_api(
 
 def generate_readonly_api_4dict(
     name: str,
-    id2ent: Mapping[str, Any],
-    unique_field_funcs: dict[str, Callable[[str], str]] = None,
-    serialize: Optional[Callable[[Any], dict]] = None,
-    batch_serialize: Optional[Callable[[list[Any]], list[dict]]] = None,
+    id2ent: Mapping[str, T],
+    unique_field_funcs: Optional[dict[str, Callable[[str], str]]] = None,
+    serialize: Optional[Callable[[T], dict]] = None,
+    batch_serialize: Optional[Callable[[list[T]], list[dict]]] = None,
 ):
     """Generate API for a dictionary.
 
