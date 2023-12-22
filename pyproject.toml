@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gena"
-version = "1.6.5"
+version = "1.6.6"
 description = "Generate APIs from Database Models"
 authors = ["Binh Vu <binh@toan2.com>"]
 license = "MIT"
@@ -11,7 +11,7 @@ python = "^3.8"
 peewee = "^3.15.2"
 Flask = "^2.2.2"
 requests = "^2.28.0"
-loguru = "^0.6.0"
+loguru = "^0.7.0"
 typing_extensions = "^4.0.0"
 orjson = ">= 3.9.0, < 4.0.0"
 python-dateutil = "^2.8.2"
