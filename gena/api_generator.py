@@ -6,12 +6,13 @@ from enum import Enum
 from typing import Any, Callable, Mapping, Optional, Type, TypeVar
 
 from flask import Blueprint, jsonify, request
-from gena.deserializer import generate_deserializer
-from gena.serializer import Serializer, get_peewee_serializer
 from peewee import DoesNotExist, ForeignKeyField
 from peewee import Model as PeeweeModel
 from peewee import fn
 from werkzeug.exceptions import BadRequest, NotFound
+
+from gena.deserializer import generate_deserializer
+from gena.serializer import Serializer, get_peewee_serializer
 
 T = TypeVar("T")
 
@@ -459,6 +460,9 @@ def generate_readonly_api_4dict(
             raise BadRequest(f"Invalid query. Must provide at least one field")
 
         id = unique_field_funcs[lst[0]](request.args[lst[0]])
+        if id not in id2ent:
+            raise NotFound(f"Record {id} does not exist")
+
         record = serialize(id2ent[id])
         if len(field_names) > 0:
             record = {k: record[k] for k in field_names if k in record}
