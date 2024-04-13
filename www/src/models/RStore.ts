@@ -217,7 +217,7 @@ export abstract class RStore<
     try {
       this.state.value = "updating";
 
-      let resp = await axios.get(`${this.remoteURL}/${id}`);
+      let resp = await this.createFetchByIdRequest(id);
 
       return runInAction(() => {
         let record = this.deserialize(resp.data);
@@ -492,6 +492,15 @@ export abstract class RStore<
   /** Decode a query back to its original form */
   public decodeWhereQuery(encodedCondition: string): QueryConditions<M> {
     return JSON.parse(atob(encodedCondition));
+  }
+
+  /**
+   * Create a request for fetching a record by id. This is useful for
+   * ID that contains special characters such as / that even encoded
+   * will be decoded automatically by the server and cause an invalid request.
+   */
+  protected createFetchByIdRequest(id: ID) {
+    return axios.get(`${this.remoteURL}/${id}`);
   }
 }
 
