@@ -494,8 +494,29 @@ def generate_readonly_api_4dict(
 
         return jsonify({"items": dict(zip(ids, records)), "total": len(ents)})
 
+    @bp.route(f"/{name}/find_by_id", methods=["GET"])
+    def find_by_id_special():
+        if "id" not in request.args:
+            raise BadRequest("Bad request. Missing `id` in the query parameter")
+
+        id = request.args["id"]
+        if id not in id2ent:
+            raise NotFound(f"Record {id} does not exist")
+
+        record = serialize(id2ent[id])
+
+        if "fields" in request.args:
+            field_names = request.args["fields"].split(",")
+        else:
+            field_names = []
+
+        if len(field_names) > 0:
+            record = {k: record[k] for k in field_names if k in record}
+
+        return jsonify(record)
+
     @bp.route(f"/{name}/<id>", methods=["GET"])
-    def find_by_id(id: str):
+    def find_by_id_normal(id: str):
         if id not in id2ent:
             raise NotFound(f"Record {id} does not exist")
 
