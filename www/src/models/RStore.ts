@@ -68,6 +68,7 @@ export interface Query<R> {
 }
 
 export type FetchResult<M> = { records: M[]; total: number };
+export type FetchResponse = { items: any[]; total: number };
 
 export abstract class RStore<
   ID extends string | number,
@@ -271,12 +272,14 @@ export abstract class RStore<
 
     try {
       this.state.value = "updating";
-      let resp = await axios.post(`${this.remoteURL}/find_by_ids`, {
-        ids: sendoutIds,
-      });
+      let resp = this.normRemoteSuccessfulResponse(
+        await axios.post(`${this.remoteURL}/find_by_ids`, {
+          ids: sendoutIds,
+        })
+      );
 
       return runInAction(() => {
-        for (const item of Object.values(resp.data.items)) {
+        for (const item of Object.values(resp.items)) {
           const record = this.deserialize(item);
           this.records.set(record.id, record);
           this.index(record);
@@ -356,16 +359,18 @@ export abstract class RStore<
         .join(",");
     }
 
-    let resp: any;
+    let resp: FetchResponse;
     try {
-      resp = await axios.get(`${this.remoteURL}`, { params });
+      resp = this.normRemoteSuccessfulResponse(
+        await axios.get(`${this.remoteURL}`, { params })
+      );
     } catch (error: any) {
       throw error;
     }
 
     return {
-      records: resp.data.items.map(this.deserialize.bind(this)),
-      total: resp.data.total,
+      records: resp.items.map(this.deserialize.bind(this)),
+      total: resp.total,
     };
   }
 
@@ -373,20 +378,22 @@ export abstract class RStore<
    * Query records by name (not store the result)
    */
   public queryByName = async (name: string): Promise<FetchResult<M>> => {
-    let resp: any;
+    let resp: FetchResponse;
     try {
-      resp = await axios.get(`${this.remoteURL}`, {
-        params: {
-          q: name,
-        },
-      });
+      resp = this.normRemoteSuccessfulResponse(
+        await axios.get(`${this.remoteURL}`, {
+          params: {
+            q: name,
+          },
+        })
+      );
     } catch (error: any) {
       throw error;
     }
 
     return {
-      records: resp.data.map(this.deserialize.bind(this)),
-      total: resp.data.total,
+      records: resp.items.map(this.deserialize.bind(this)),
+      total: resp.total,
     };
   };
 
@@ -501,6 +508,17 @@ export abstract class RStore<
    */
   protected createFetchByIdRequest(id: ID) {
     return axios.get(`${this.remoteURL}/${id}`);
+  }
+
+  /**
+   * Normalize the response of fetching multiple records from the remote server. This is useful when the
+   * response is not in the format that we want.
+   */
+  protected normRemoteSuccessfulResponse(resp: any): FetchResponse {
+    return {
+      items: resp.data.items,
+      total: resp.data.total,
+    };
   }
 }
 
