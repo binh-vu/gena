@@ -5,7 +5,12 @@ export type {
   DraftUpdateRecord,
   DraftUpdateJunctionRecord,
 } from "./Record";
-export type { Query, QueryConditions, FetchResult } from "./RStore";
+export type {
+  Query,
+  QueryConditions,
+  FetchResult,
+  FetchResponse,
+} from "./RStore";
 export { RStore } from "./RStore";
 export { CRUDStore, SimpleCRUDStore } from "./CRUDStore";
 export { CRUDJunctionStore } from "./CRUDJunctionStore";
