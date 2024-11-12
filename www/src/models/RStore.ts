@@ -208,8 +208,8 @@ export abstract class RStore<
    *
    * @returns the record if it exists, undefined otherwise
    */
-  async fetchById(id: ID): Promise<M | undefined> {
-    if (!this.refetch && this.has(id)) {
+  async fetchById(id: ID, force: boolean = false): Promise<M | undefined> {
+    if (!force && !this.refetch && this.has(id)) {
       const record = this.records.get(id);
       if (record === null) return Promise.resolve(undefined);
       return Promise.resolve(record);
