@@ -107,7 +107,11 @@ export class PathDef<
       path = path.replace(`:${v}`, urlArgs[v] as any as string);
     }
 
-    let query = new URLSearchParams(queryArgs as any).toString();
+    let query = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(queryArgs).filter(([key, val]) => val !== undefined)
+      )
+    ).toString();
     query = query.length > 0 ? `?${query}` : query;
 
     return {

@@ -8,6 +8,7 @@ export {
   routeAPIs,
   NoArgsPathDef,
   NoQueryArgsPathDef,
+  NoURLArgsPathDef,
   OptionalQueryArgsPathDef,
 } from "./route";
 
