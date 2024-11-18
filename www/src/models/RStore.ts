@@ -279,7 +279,7 @@ export abstract class RStore<
       );
 
       return runInAction(() => {
-        for (const item of Object.values(resp.items)) {
+        for (const item of resp.items) {
           const record = this.deserialize(item);
           this.records.set(record.id, record);
           this.index(record);
@@ -516,7 +516,9 @@ export abstract class RStore<
    */
   protected normRemoteSuccessfulResponse(resp: any): FetchResponse {
     return {
-      items: resp.data.items,
+      items: Array.isArray(resp.data.items)
+        ? resp.data.items
+        : Object.values(resp.data.items),
       total: resp.data.total,
     };
   }
