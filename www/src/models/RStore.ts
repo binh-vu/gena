@@ -252,9 +252,9 @@ export abstract class RStore<
    *
    * @returns an object containing record that we found (the one we didn't found is undefined)
    */
-  async fetchByIds(ids: ID[]): Promise<Record<ID, M>> {
+  async fetchByIds(ids: ID[], force: boolean = false): Promise<Record<ID, M>> {
     let sendoutIds = ids;
-    if (!this.refetch) {
+    if (!force && !this.refetch) {
       // no refetch, then we need to filter the list of ids
       sendoutIds = sendoutIds.filter((id) => !this.has(id));
 
