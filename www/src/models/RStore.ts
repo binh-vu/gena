@@ -252,7 +252,11 @@ export abstract class RStore<
    *
    * @returns an object containing record that we found (the one we didn't found is undefined)
    */
-  async fetchByIds(ids: ID[], force: boolean = false): Promise<Record<ID, M>> {
+  async fetchByIds(
+    ids: ID[],
+    force: boolean = false,
+    extraArgs: object | undefined = undefined
+  ): Promise<Record<ID, M>> {
     let sendoutIds = ids;
     if (!force && !this.refetch) {
       // no refetch, then we need to filter the list of ids
@@ -272,10 +276,12 @@ export abstract class RStore<
 
     try {
       this.state.value = "updating";
+      let params =
+        extraArgs !== undefined
+          ? { ids: sendoutIds, ...extraArgs }
+          : { ids: sendoutIds };
       let resp = this.normRemoteSuccessfulResponse(
-        await axios.post(`${this.remoteURL}/find_by_ids`, {
-          ids: sendoutIds,
-        })
+        await axios.post(`${this.remoteURL}/find_by_ids`, params)
       );
 
       return runInAction(() => {
