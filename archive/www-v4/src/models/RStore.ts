@@ -347,15 +347,14 @@ export abstract class RStore<
         params.sorted_by = query.sortedBy
           .map((item) => {
             const field = this.field2name[item.field] || item.field;
-            return item.order === "asc" ? field : `-${String(field)}`;
+            return item.order === "asc" ? field : `-${field}`;
           })
           .join(",");
       }
     } else if (typeof query.sortedBy === "object") {
       const field =
         this.field2name[query.sortedBy.field] || query.sortedBy.field;
-      params.sorted_by =
-        query.sortedBy.order === "asc" ? field : `-${String(field)}`;
+      params.sorted_by = query.sortedBy.order === "asc" ? field : `-${field}`;
     } else {
       params.sorted_by = this.field2name[query.sortedBy] || query.sortedBy;
     }

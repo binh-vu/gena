@@ -1,7 +1,9 @@
-import { matchPath, Path as RRPath } from "react-router";
+import { Location } from "history";
+import { matchPath } from "react-router";
 import { PathDef, ReactComponent, ArgType, ArgSchema } from "./route";
 export { ExternalLink, InternalHTMLLink, InternalLink } from "./Link";
 export {
+  history,
   PathDef,
   routeAPIs,
   NoArgsPathDef,
@@ -14,11 +16,11 @@ export {
  * Find the route that matches with the current location
  */
 export function getActiveRouteName(
-  location: RRPath,
+  location: Location<any>,
   routes: { [name: string]: PathDef<any, any> }
 ): string | undefined {
   for (let [name, route] of Object.entries(routes)) {
-    if (matchPath(route.routeDef, location.pathname) !== null) {
+    if (matchPath(location.pathname, route.routeDef) !== null) {
       return name;
     }
   }

@@ -1,52 +1,28 @@
 {
-  "name": "gena-app",
-  "version": "4.4.4",
-  "private": false,
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/binh-vu/gena.git"
-  },
-  "main": "./lib/cjs/index.js",
-  "module": "./lib/esm/index.js",
-  "types": "./lib/esm/index.d.ts",
-  "files": [
-    "/lib"
-  ],
+  "name": "www",
+  "version": "5.0.0",
+  "private": true,
   "dependencies": {
-    "@mui/styles": "^5.10.3",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
-    "@types/jest": "^26.0.15",
-    "@types/lodash": "^4.14.173",
-    "@types/node": "^12.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
-    "@types/react-router-dom": "^5.1.9",
-    "axios": "^0.27.2",
-    "mobx": "^6.3.5",
-    "mobx-react": "^7.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-router-dom": "^5.3.0",
-    "react-scripts": "4.0.3",
-    "typescript": "^4.1.2",
-    "web-vitals": "^1.0.1"
-  },
-  "resolutions": {
-    "//": "See https://github.com/facebook/create-react-app/issues/11773",
-    "react-error-overlay": "6.0.9"
-  },
-  "devDependencies": {
-    "//": "See https://github.com/facebook/create-react-app/issues/11773",
-    "react-error-overlay": "6.0.9"
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.120",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "axios": "^1.7.8",
+    "mobx": "^6.13.5",
+    "mobx-react": "^9.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.0.1",
+    "react-scripts": "5.0.1",
+    "typescript": "^4.9.5",
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "build": "yarn build:esm && yarn build:cjs",
-    "build:lib": "yarn build:esm && yarn build:cjs",
-    "build:esm": "tsc --noEmit false",
-    "build:cjs": "tsc --noEmit false --module commonjs --outDir lib/cjs",
     "start": "react-scripts start",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -56,7 +32,6 @@
       "react-app/jest"
     ]
   },
-  "proxy": "http://localhost:8000",
   "browserslist": {
     "production": [
       ">0.2%",
@@ -69,5 +44,8 @@
       "last 1 safari version"
     ]
   },
-  "license": "MIT"
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-transform-private-property-in-object": "^7.25.9"
+  }
 }

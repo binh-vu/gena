@@ -1,11 +1,11 @@
-import {
-  matchPath,
-  useLocation,
-  Location,
-  Path as RRPath,
-  NavigateFunction,
-} from "react-router";
+import { Location } from "history";
+import { PLATFORM } from "../env";
+import { createBrowserHistory, createMemoryHistory } from "history";
+import { matchPath, useLocation } from "react-router";
 import React, { useMemo } from "react";
+
+export const history =
+  PLATFORM === "native" ? createMemoryHistory() : createBrowserHistory();
 
 export type ReactComponent =
   | React.ComponentClass<any, any>
@@ -98,7 +98,10 @@ export class PathDef<
   /**
    * Create a location that the history object can be pushed
    */
-  public location(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): RRPath {
+  public location(
+    urlArgs: ArgSchema<U>,
+    queryArgs: ArgSchema<Q>
+  ): Location<any> {
     let path = this.pathDef;
     for (let v in urlArgs) {
       path = path.replace(`:${v}`, urlArgs[v] as any as string);
@@ -115,6 +118,7 @@ export class PathDef<
       pathname: path,
       search: query,
       hash: "",
+      state: undefined,
     };
   }
 
@@ -151,7 +155,7 @@ export class PathDef<
    * @returns null if the route doesn't match or any parameter fails to pass the runtime type check
    */
   public getURLArgs(location: Location<any>): ArgSchema<U> | null {
-    const m = matchPath(this.routeDef, location.pathname);
+    const m = matchPath(location.pathname, this.routeDef);
     if (m === null) {
       return null;
     }
@@ -248,7 +252,7 @@ export class NoArgsPathDef extends PathDef<{}, {}> {
     return super.getURL({}, {});
   }
 
-  public location(): RRPath {
+  public location(): Location<any> {
     return super.location({}, {});
   }
 
@@ -267,7 +271,7 @@ export class NoQueryArgsPathDef<
     return super.getURL(urlArgs, {});
   }
 
-  public location(urlArgs: ArgSchema<U>): RRPath {
+  public location(urlArgs: ArgSchema<U>): Location<any> {
     return super.location(urlArgs, {});
   }
 
@@ -283,7 +287,7 @@ export class NoURLArgsPathDef<
     return super.getURL({}, queryArgs);
   }
 
-  public location(queryArgs: ArgSchema<Q>): RRPath {
+  public location(queryArgs: ArgSchema<Q>): Location<any> {
     return super.location({}, queryArgs);
   }
 
@@ -300,7 +304,10 @@ export class OptionalQueryArgsPathDef<
     return super.getURL(urlArgs, queryArgs || ({} as ArgSchema<Q>));
   }
 
-  public location(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): RRPath {
+  public location(
+    urlArgs: ArgSchema<U>,
+    queryArgs?: ArgSchema<Q>
+  ): Location<any> {
     return super.location(urlArgs, queryArgs || ({} as ArgSchema<Q>));
   }
 
@@ -330,21 +337,14 @@ class Path<
   /**
    * Open this path
    */
-  public open(navigate: NavigateFunction) {
-    navigate(this.pathDef.location(this.urlArgs, this.queryArgs));
-  }
-
-  public getMouseClickNavigationHandler(navigate: NavigateFunction) {
-    return (e?: React.MouseEvent, openInNewPage?: boolean) => {
-      this.mouseClickNavigationHandler(navigate, e, openInNewPage);
-    };
+  public open() {
+    history.push(this.pathDef.location(this.urlArgs, this.queryArgs));
   }
 
   /**
    * Handler for a mouse event navigation (e.g., linking on an <a> element)
    */
   public mouseClickNavigationHandler = (
-    navigate: NavigateFunction,
     e?: React.MouseEvent,
     openInNewPage?: boolean
   ) => {
@@ -358,7 +358,7 @@ class Path<
       // keep the focus on this page
       window.focus();
     } else {
-      navigate(this.pathDef.location(this.urlArgs, this.queryArgs));
+      history.push(this.pathDef.location(this.urlArgs, this.queryArgs));
     }
   };
 }
@@ -368,24 +368,23 @@ class Path<
  */
 export const routeAPIs = {
   internalHTMLLinkClickFnId: "window._routeAPIs.internalHTMLLinkClick",
-  internalHTMLLinkClick:
-    (navigate: NavigateFunction) =>
-    (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault();
+  history: history,
+  internalHTMLLinkClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
 
-      let href = (e.target as any).getAttribute("href");
-      if (e.ctrlKey || e.metaKey) {
-        // holding ctrl or cmd key, we should open in new windows, even in native, because it is internal, another window still work
-        window.open(href, "_blank");
-        window.focus();
-      } else {
-        navigate(href);
-      }
-    },
-  goBack: (navigate: NavigateFunction) => navigate(-1),
-  goForward: (navigate: NavigateFunction) => navigate(1),
-  openInternalLink: (navigate: NavigateFunction, href: string) => {
-    navigate(href);
+    let href = (e.target as any).getAttribute("href");
+    if (e.ctrlKey || e.metaKey) {
+      // holding ctrl or cmd key, we should open in new windows, even in native, because it is internal, another window still work
+      window.open(href, "_blank");
+      window.focus();
+    } else {
+      history.push(href);
+    }
+  },
+  goBack: () => history.goBack(),
+  goForward: () => history.goForward(),
+  openInternalLink: (href: string) => {
+    history.push(href);
   },
 };
 (window as any)._routeAPIs = routeAPIs;

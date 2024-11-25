@@ -2,7 +2,6 @@ import React from "react";
 import { ArgSchema, ArgType } from "./route";
 import { PLATFORM } from "../env";
 import { PathDef, routeAPIs } from "./route";
-import { useNavigate } from "react-router";
 
 /**
  * This file contains all helper to dealing with Links and Navigation in the application so that we can handle it easier in different platforms
@@ -19,14 +18,10 @@ export const InternalLink = <
     queryArgs: ArgSchema<Q>;
   } & Omit<React.HTMLProps<HTMLAnchorElement>, "onClick">
 ) => {
-  const navigate = useNavigate();
-
   const { path, urlArgs, queryArgs, children, openInNewPage, ...restprops } =
     props;
   const onClick = (e: any) => {
-    path
-      .path(urlArgs, queryArgs)
-      .mouseClickNavigationHandler(navigate, e, openInNewPage);
+    path.path(urlArgs, queryArgs).mouseClickNavigationHandler(e, openInNewPage);
   };
 
   return (

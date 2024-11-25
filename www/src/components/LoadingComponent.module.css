@@ -1,0 +1,26 @@
+.container {
+  padding-top: 12px;
+  padding-bottom: 4px;
+  text-align: center;
+}
+
+.spin {
+  animation: "loadingCircle 1s infinite linear";
+  -webkit-animation: "loadingCircle 1s infinite linear";
+  display: "inline-block";
+  font-size: 24px;
+  color: "#1890ff";
+  line-height: 0;
+  vertical-align: "-0.125em";
+  width: "1em";
+  height: "1em";
+  -webkit-font-smoothing: "antialiased";
+  text-transform: "none";
+}
+
+.text {
+  line-height: 1.5715;
+  padding-top: 5px;
+  text-shadow: "0 1px 2px #fff";
+  color: "#1890ff";
+}
