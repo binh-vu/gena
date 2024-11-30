@@ -51,7 +51,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: www
-          path: www/lib
+          path: www/build
 
   release:
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: www
-          path: www/lib
+          path: www/build
       - name: pypi publish
         run: |
           pip install twine
