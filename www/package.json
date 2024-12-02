@@ -1,6 +1,6 @@
 {
   "name": "gena-app",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "private": false,
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
@@ -21,7 +21,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc --noEmit false --outDir lib/esm",
+    "build:cjs": "tsc --noEmit false --module commonjs --outDir lib/cjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

@@ -1,16 +1,16 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom";
+import { App } from "gena-app";
+import { StoreContext, stores } from "./models";
+import reportWebVitals from "./reportWebVitals";
+import "./index.css";
+import { routes } from "./routes";
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+ReactDOM.render(
+  <StoreContext.Provider value={stores}>
+    <App routes={routes} strict={true} />
+  </StoreContext.Provider>,
+  document.getElementById("root")
 );
 
 // If you want to start measuring performance in your app, pass a function
