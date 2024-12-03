@@ -56,12 +56,12 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
   if (typeof applyFn === "function") {
     for (let [name, route] of Object.entries(routes)) {
       if (ignoredRoutes.has(name)) continue;
-      route.routeDef.component = applyFn(route.component, routes);
+      route.routeDef.Component = applyFn(route.Component, routes);
     }
   } else {
     for (let [name, route] of Object.entries(routes)) {
       if (ignoredRoutes.has(name) || applyFn[name] === undefined) continue;
-      route.routeDef.component = applyFn[name]!(route.component, routes);
+      route.routeDef.Component = applyFn[name]!(route.Component, routes);
     }
   }
 }

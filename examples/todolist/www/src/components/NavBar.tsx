@@ -1,33 +1,8 @@
 import { Menu } from "antd";
-import { makeStyles } from "@mui/styles";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { getActiveRouteName, PathDef } from "gena-app";
 import React from "react";
-
-const useStyles = makeStyles({
-  centerNavBar: {
-    justifyContent: "center",
-    boxShadow: "0 2px 8px #f0f1f2",
-  },
-  leftNavBar: {
-    "& .logo::after": {
-      borderBottom: "none !important",
-      transition: "none !important",
-    },
-    "& .logo:hover::after": {
-      borderBottom: "none !important",
-      transition: "none !important",
-    },
-    "& .logo img": {
-      height: 24,
-      borderRadius: 4,
-      marginTop: -2,
-    },
-    paddingLeft: 24,
-    paddingRight: 24,
-    boxShadow: "0 2px 8px #f0f1f2",
-  },
-});
+import styles from "./Navbar.module.css";
 
 type MenuItemProps = {
   children: string | JSX.Element;
@@ -51,10 +26,10 @@ export const CenterNavBar = <R extends Record<any, PathDef<any, any>>>({
   style,
   isFirstItemLogo,
 }: Props<R>) => {
-  const classes = useStyles();
   const location = useLocation();
+  const navigate = useNavigate();
   const openMenu = (e: { key: keyof R }) => {
-    routes[e.key].path({}, {}).open();
+    routes[e.key].path({}, {}).open(navigate);
   };
 
   const items = Object.keys(menus).map((routeName, index) => {
@@ -67,7 +42,7 @@ export const CenterNavBar = <R extends Record<any, PathDef<any, any>>>({
     <Menu
       mode="horizontal"
       className={
-        classes.centerNavBar + (className !== undefined ? " " + className : "")
+        styles.centerNavBar + (className !== undefined ? " " + className : "")
       }
       style={style}
       onClick={openMenu}
@@ -87,10 +62,10 @@ export const LeftNavBar = <R extends Record<any, PathDef<any, any>>>({
   style,
   isFirstItemLogo,
 }: Props<R>) => {
-  const classes = useStyles();
   const location = useLocation();
+  const navigate = useNavigate();
   const openMenu = (e: { key: keyof R }) => {
-    routes[e.key].path({}, {}).open();
+    routes[e.key].path({}, {}).open(navigate);
   };
 
   const items = Object.keys(menus).map((routeName, index) => {
@@ -103,7 +78,7 @@ export const LeftNavBar = <R extends Record<any, PathDef<any, any>>>({
     <Menu
       mode="horizontal"
       className={
-        classes.leftNavBar + (className !== undefined ? " " + className : "")
+        styles.leftNavBar + (className !== undefined ? " " + className : "")
       }
       style={style}
       onClick={openMenu}

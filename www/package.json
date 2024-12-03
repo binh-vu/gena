@@ -1,7 +1,17 @@
 {
   "name": "gena-app",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/binh-vu/gena.git"
+  },
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
+  "files": [
+    "/lib"
+  ],
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
@@ -22,8 +32,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc --noEmit false --outDir lib/esm",
-    "build:cjs": "tsc --noEmit false --module commonjs --outDir lib/cjs",
+    "build:esm": "tsc --noEmit false && cp -a src/components/*.css lib/esm/components/",
+    "build:cjs": "tsc --noEmit false --module commonjs --outDir lib/cjs && cp -a src/components/*.css lib/cjs/components/",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -48,5 +58,6 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/plugin-transform-private-property-in-object": "^7.25.9"
-  }
+  },
+  "license": "MIT"
 }

@@ -43,14 +43,14 @@ export class PathDef<
     path: string;
     exact: boolean;
     strict: boolean;
-    component: ReactComponent;
+    Component: ReactComponent;
   };
-  public component: ReactComponent;
+  public Component: ReactComponent;
 
   public constructor({
     urlSchema = {} as U,
     querySchema = {} as Q,
-    component,
+    component: Component,
     pathDef,
     exact = false,
     strict = false,
@@ -67,8 +67,8 @@ export class PathDef<
     this.pathDef = pathDef;
     this.exact = exact;
     this.strict = strict;
-    this.routeDef = { path: pathDef, exact, strict, component };
-    this.component = component;
+    this.routeDef = { path: pathDef, exact, strict, Component };
+    this.Component = Component;
   }
 
   /**

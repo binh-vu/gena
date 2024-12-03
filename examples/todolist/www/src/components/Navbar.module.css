@@ -1,0 +1,22 @@
+.centerNavBar {
+  justify-content: "center";
+  box-shadow: "0 2px 8px #f0f1f2";
+}
+.leftNavBar .logo::after {
+  border-bottom: "none !important";
+  transition: "none !important";
+}
+.leftNavBar .logo:hover::after {
+  border-bottom: "none !important";
+  transition: "none !important";
+}
+.leftNavBar .logo img {
+  height: 24;
+  border-radius: 4;
+  margin-top: -2;
+}
+.leftNavBar {
+  padding-left: 24;
+  padding-right: 24;
+  box-shadow: "0 2px 8px #f0f1f2";
+}
