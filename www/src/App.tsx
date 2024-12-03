@@ -10,7 +10,7 @@ export default function App({
 }: {
   enUSLocale?: boolean;
   routes: { [name: string]: PathDef<any, any> };
-  strict: boolean;
+  strict?: boolean;
 }) {
   const child = (
     <div className="app-body">
