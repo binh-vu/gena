@@ -1,5 +1,6 @@
-import { matchPath, Path as RRPath } from "react-router";
+import { matchPath, Path as RRPath, useLocation } from "react-router";
 import { PathDef, ReactComponent, ArgType, ArgSchema } from "./route";
+import { useMemo } from "react";
 export { ExternalLink, InternalHTMLLink, InternalLink } from "./Link";
 export {
   PathDef,
@@ -64,6 +65,34 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
       route.routeDef.Component = applyFn[name]!(route.Component, routes);
     }
   }
+}
+
+/** React hook to get URL parameters */
+export function useURLParams<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+>(pathDef: PathDef<U, Q>): ArgSchema<U> | null {
+  const location = useLocation();
+  return useMemo(() => pathDef.getURLArgs(location), [location.pathname]);
+}
+
+/** React hook to get query parameters */
+export function useQueryParams<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+>(pathDef: PathDef<U, Q>): ArgSchema<Q> | null {
+  const location = useLocation();
+  return useMemo(() => pathDef.getQueryArgs(location), [location.search]);
+}
+
+/** React hook to get parameters */
+export function useParams<
+  U extends Record<string, keyof ArgType>,
+  Q extends Record<string, keyof ArgType>
+>(
+  pathDef: PathDef<U, Q>
+): { url: ArgSchema<U> | null; query: ArgSchema<Q> | null } {
+  return { url: useURLParams(pathDef), query: useQueryParams(pathDef) };
 }
 
 export type { ReactComponent, ArgType, ArgSchema };

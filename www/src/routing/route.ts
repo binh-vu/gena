@@ -78,7 +78,13 @@ export class PathDef<
    * since it won't follow the semantic of react-router but more like when you open a link
    * at the first time in the browser (that's why for hash history, we have to add `#`)
    */
-  public getURL(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): string {
+  public getURL({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs: ArgSchema<Q>;
+  }): string {
     let path = this.pathDef;
 
     if (urlArgs !== null) {
@@ -98,7 +104,13 @@ export class PathDef<
   /**
    * Create a location that the history object can be pushed
    */
-  public location(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): RRPath {
+  public location({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs: ArgSchema<Q>;
+  }): RRPath {
     let path = this.pathDef;
     for (let v in urlArgs) {
       path = path.replace(`:${v}`, urlArgs[v] as any as string);
@@ -121,29 +133,14 @@ export class PathDef<
   /**
    * Build a path that can be used to navigate to a link
    */
-  public path(urlArgs: ArgSchema<U>, queryArgs: ArgSchema<Q>): Path<U, Q> {
+  public path({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs: ArgSchema<Q>;
+  }): Path<U, Q> {
     return new Path(this, urlArgs, queryArgs);
-  }
-
-  /** React hook to get URL parameters */
-  public useURLParams(): ArgSchema<U> | null {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const location = useLocation();
-    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
-    return useMemo(() => this.getURLArgs(location), [location.pathname]);
-  }
-
-  /** React hook to get query parameters */
-  public useQueryParams() {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const location = useLocation();
-    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
-    return useMemo(() => this.getQueryArgs(location), [location.search]);
-  }
-
-  /** React hook to get parameters */
-  public useParams(): { url: ArgSchema<U> | null; query: ArgSchema<Q> | null } {
-    return { url: this.useURLParams(), query: this.useQueryParams() };
   }
 
   /**
@@ -245,15 +242,15 @@ export class PathDef<
  */
 export class NoArgsPathDef extends PathDef<{}, {}> {
   public getURL(): string {
-    return super.getURL({}, {});
+    return super.getURL({ urlArgs: {}, queryArgs: {} });
   }
 
   public location(): RRPath {
-    return super.location({}, {});
+    return super.location({ urlArgs: {}, queryArgs: {} });
   }
 
   public path(): Path<{}, {}> {
-    return super.path({}, {});
+    return super.path({ urlArgs: {}, queryArgs: {} });
   }
 }
 
@@ -263,32 +260,32 @@ export class NoArgsPathDef extends PathDef<{}, {}> {
 export class NoQueryArgsPathDef<
   U extends Record<string, keyof ArgType>
 > extends PathDef<U, {}> {
-  public getURL(urlArgs: ArgSchema<U>): string {
-    return super.getURL(urlArgs, {});
+  public getURL({ urlArgs }: { urlArgs: ArgSchema<U> }): string {
+    return super.getURL({ urlArgs, queryArgs: {} });
   }
 
-  public location(urlArgs: ArgSchema<U>): RRPath {
-    return super.location(urlArgs, {});
+  public location({ urlArgs }: { urlArgs: ArgSchema<U> }): RRPath {
+    return super.location({ urlArgs, queryArgs: {} });
   }
 
-  public path(urlArgs: ArgSchema<U>): Path<U, {}> {
-    return super.path(urlArgs, {});
+  public path({ urlArgs }: { urlArgs: ArgSchema<U> }): Path<U, {}> {
+    return super.path({ urlArgs, queryArgs: {} });
   }
 }
 
 export class NoURLArgsPathDef<
   Q extends Record<string, keyof ArgType>
 > extends PathDef<{}, Q> {
-  public getURL(queryArgs: ArgSchema<Q>): string {
-    return super.getURL({}, queryArgs);
+  public getURL({ queryArgs }: { queryArgs: ArgSchema<Q> }): string {
+    return super.getURL({ urlArgs: {}, queryArgs });
   }
 
-  public location(queryArgs: ArgSchema<Q>): RRPath {
-    return super.location({}, queryArgs);
+  public location({ queryArgs }: { queryArgs: ArgSchema<Q> }): RRPath {
+    return super.location({ urlArgs: {}, queryArgs });
   }
 
-  public path(queryArgs: ArgSchema<Q>): Path<{}, Q> {
-    return super.path({}, queryArgs);
+  public path({ queryArgs }: { queryArgs: ArgSchema<Q> }): Path<{}, Q> {
+    return super.path({ urlArgs: {}, queryArgs });
   }
 }
 
@@ -296,16 +293,43 @@ export class OptionalQueryArgsPathDef<
   U extends Record<string, keyof ArgType>,
   Q extends Record<string, keyof ArgType>
 > extends PathDef<U, Q> {
-  public getURL(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): string {
-    return super.getURL(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  public getURL({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs?: ArgSchema<Q>;
+  }): string {
+    return super.getURL({
+      urlArgs: urlArgs,
+      queryArgs: queryArgs || ({} as ArgSchema<Q>),
+    });
   }
 
-  public location(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): RRPath {
-    return super.location(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  public location({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs?: ArgSchema<Q>;
+  }): RRPath {
+    return super.location({
+      urlArgs: urlArgs,
+      queryArgs: queryArgs || ({} as ArgSchema<Q>),
+    });
   }
 
-  public path(urlArgs: ArgSchema<U>, queryArgs?: ArgSchema<Q>): Path<U, Q> {
-    return super.path(urlArgs, queryArgs || ({} as ArgSchema<Q>));
+  public path({
+    urlArgs,
+    queryArgs,
+  }: {
+    urlArgs: ArgSchema<U>;
+    queryArgs?: ArgSchema<Q>;
+  }): Path<U, Q> {
+    return super.path({
+      urlArgs: urlArgs,
+      queryArgs: queryArgs || ({} as ArgSchema<Q>),
+    });
   }
 }
 
@@ -331,7 +355,12 @@ class Path<
    * Open this path
    */
   public open(navigate: NavigateFunction) {
-    navigate(this.pathDef.location(this.urlArgs, this.queryArgs));
+    navigate(
+      this.pathDef.location({
+        urlArgs: this.urlArgs,
+        queryArgs: this.queryArgs,
+      })
+    );
   }
 
   public getMouseClickNavigationHandler(navigate: NavigateFunction) {
@@ -354,11 +383,22 @@ class Path<
 
     if (openInNewPage || (e !== undefined && (e.ctrlKey || e.metaKey))) {
       // holding ctrl or cmd key, we should open in new windows
-      window.open(this.pathDef.getURL(this.urlArgs, this.queryArgs), "_blank");
+      window.open(
+        this.pathDef.getURL({
+          urlArgs: this.urlArgs,
+          queryArgs: this.queryArgs,
+        }),
+        "_blank"
+      );
       // keep the focus on this page
       window.focus();
     } else {
-      navigate(this.pathDef.location(this.urlArgs, this.queryArgs));
+      navigate(
+        this.pathDef.location({
+          urlArgs: this.urlArgs,
+          queryArgs: this.queryArgs,
+        })
+      );
     }
   };
 }
