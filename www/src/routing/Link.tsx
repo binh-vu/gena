@@ -25,12 +25,16 @@ export const InternalLink = <
     props;
   const onClick = (e: any) => {
     path
-      .path(urlArgs, queryArgs)
+      .path({ urlArgs, queryArgs })
       .mouseClickNavigationHandler(navigate, e, openInNewPage);
   };
 
   return (
-    <a href={path.getURL(urlArgs, queryArgs)} onClick={onClick} {...restprops}>
+    <a
+      href={path.getURL({ urlArgs, queryArgs })}
+      onClick={onClick}
+      {...restprops}
+    >
       {children}
     </a>
   );
