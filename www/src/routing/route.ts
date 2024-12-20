@@ -1,11 +1,10 @@
 import {
   matchPath,
-  useLocation,
   Location,
   Path as RRPath,
   NavigateFunction,
 } from "react-router";
-import React, { useMemo } from "react";
+import React from "react";
 
 export type ReactComponent =
   | React.ComponentClass<any, any>
