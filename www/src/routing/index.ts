@@ -38,10 +38,18 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
     | Partial<
         Record<
           keyof R,
-          (component: ReactComponent, routes: R) => ReactComponent
+          (
+            component: ReactComponent,
+            route: keyof R,
+            routes: R
+          ) => ReactComponent
         >
       >
-    | ((component: ReactComponent, routes: R) => ReactComponent),
+    | ((
+        component: ReactComponent,
+        route: keyof R,
+        routes: R
+      ) => ReactComponent),
   ignoredRoutes?: (keyof R)[] | Set<keyof R> | Partial<R>
 ) {
   if (ignoredRoutes === undefined) {
@@ -57,12 +65,12 @@ export function applyLayout<R extends Record<any, PathDef<any, any>>>(
   if (typeof applyFn === "function") {
     for (let [name, route] of Object.entries(routes)) {
       if (ignoredRoutes.has(name)) continue;
-      route.routeDef.Component = applyFn(route.Component, routes);
+      route.routeDef.Component = applyFn(route.Component, name, routes);
     }
   } else {
     for (let [name, route] of Object.entries(routes)) {
       if (ignoredRoutes.has(name) || applyFn[name] === undefined) continue;
-      route.routeDef.Component = applyFn[name]!(route.Component, routes);
+      route.routeDef.Component = applyFn[name]!(route.Component, name, routes);
     }
   }
 }
