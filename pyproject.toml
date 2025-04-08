@@ -9,7 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8"
 peewee = "^3.15.2"
-Flask = "^2.2.2"
+flask = "^3.1.0"
 requests = "^2.28.0"
 loguru = "^0.7.0"
 typing_extensions = "^4.0.0"
@@ -17,7 +17,7 @@ orjson = ">= 3.9.0, < 4.0.0"
 python-dateutil = "^2.8.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.2.0"
+pytest = "^8.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
